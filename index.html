@@ -338,9 +338,9 @@ document.querySelectorAll('#cover .reveal').forEach((el,i)=>{setTimeout(()=>el.c
 setTimeout(()=>document.getElementById('scrollHint').classList.add('visible'),1400);
 
 let chartAStarted=false,chartBStarted=false;
-const obsA=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting&&!chartAStarted){chartAStarted=true;runChartA()}})},{threshold:0.25});
+const obsA=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting&&!chartAStarted){chartAStarted=true;runChartA()}})},{threshold:0.65});
 obsA.observe(document.getElementById('chartA'));
-const obsB=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting&&!chartBStarted){chartBStarted=true;runChartB()}})},{threshold:0.25});
+const obsB=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting&&!chartBStarted){chartBStarted=true;runChartB()}})},{threshold:0.65});
 obsB.observe(document.getElementById('chartB'));
 window.addEventListener('resize',()=>{chartA.resize();if(chartAStarted)drawA();chartB.resize();if(chartBStarted)drawB()});
 setTimeout(()=>{document.querySelectorAll(".reveal").forEach(el=>el.classList.add("visible"))},3000);

@@ -25,7 +25,7 @@
   .tagline{font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:36px;letter-spacing:5px;text-transform:uppercase;color:var(--grey-light);position:relative;z-index:1;text-align:center}
   .tagline span{color:var(--red)}
   .stealth-note{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-size:13px;font-style:italic;color:var(--grey-subtle);white-space:nowrap;z-index:1}
-  .scroll-hint{position:absolute;bottom:56px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1;animation:bounce 2.2s ease-in-out infinite;opacity:0;transition:opacity 1s ease 1.2s}
+  .scroll-hint{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1;animation:bounce 2.2s ease-in-out infinite;opacity:0;transition:opacity 1s ease 1.2s}
   .scroll-hint.visible{opacity:1}
   .scroll-hint span{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--grey-subtle)}
   @keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(7px)}}
@@ -340,7 +340,7 @@ setTimeout(()=>document.getElementById('scrollHint').classList.add('visible'),14
 let chartAStarted=false,chartBStarted=false;
 const obsA=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting&&!chartAStarted){chartAStarted=true;runChartA()}})},{threshold:0.25});
 obsA.observe(document.getElementById('chartA'));
-const obsB=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting&&!chartBStarted){chartBStarted=true;runChartB()}})},{threshold:0.05});
+const obsB=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting&&!chartBStarted){chartBStarted=true;runChartB()}})},{threshold:0.25});
 obsB.observe(document.getElementById('chartB'));
 window.addEventListener('resize',()=>{chartA.resize();if(chartAStarted)drawA();chartB.resize();if(chartBStarted)drawB()});
 setTimeout(()=>{document.querySelectorAll(".reveal").forEach(el=>el.classList.add("visible"))},3000);

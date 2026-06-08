@@ -483,11 +483,18 @@ function processRecords(records) {
   const meanLon = lons.reduce((a, b) => a + b, 0) / lons.length;
 
   const toHMS = ts => new Date((ts + FIT_EPOCH) * 1000).toISOString().slice(11, 19);
+  const _DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const _MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const toDateStr = ts => {
+    const d = new Date((ts + FIT_EPOCH) * 1000);
+    return `${_DAYS[d.getUTCDay()]}, ${String(d.getUTCDate()).padStart(2,'0')} ${_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  };
 
   return {
     segments,
     seg_seconds:   segSeconds,
     duration_s:    tEnd - tStart,
+    t_date_str:    toDateStr(tStart),
     t_start_str:   toHMS(tStart),
     t_end_str:     toHMS(tEnd),
     data_min,
@@ -547,6 +554,7 @@ console.log('\n=== Pipeline Output ===');
 console.log(`Primary channel:    ${DATA.primaryKey}`);
 console.log(`Segments:           ${DATA.segments.length}`);
 console.log(`Duration:           ${DATA.duration_s} s          [v04: ${V04.duration_s}]`);
+console.log(`Date:               ${DATA.t_date_str}`);
 console.log(`Start / End:        ${DATA.t_start_str} / ${DATA.t_end_str}`);
 console.log(`data_min:           ${DATA.data_min.toFixed(6)}   [v04: ${V04.data_min.toFixed(6)}]`);
 console.log(`data_max:           ${DATA.data_max.toFixed(6)}   [v04: ${V04.data_max.toFixed(6)}]`);

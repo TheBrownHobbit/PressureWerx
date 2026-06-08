@@ -333,6 +333,17 @@ function validate(records) {
 }
 
 // ---------------------------------------------------------------------------
+// loadFit — accepts either a ZIP or a bare .fit file path
+// ---------------------------------------------------------------------------
+function loadFit(filepath) {
+  const buf = fs.readFileSync(filepath);
+  if (buf[0] === 0x50 && buf[1] === 0x4B) return unzipFirst(buf);   // ZIP magic PK
+  if (buf.slice(8, 12).toString('ascii') !== '.FIT')
+    throw new Error(`Not a valid FIT or ZIP file: ${filepath}`);
+  return buf;
+}
+
+// ---------------------------------------------------------------------------
 // Processing pipeline
 // ---------------------------------------------------------------------------
 
@@ -457,6 +468,8 @@ function processRecords(records) {
 
   // GPS stats
   const withGps = records.filter(r => r.lat != null);
+  if (withGps.length === 0)
+    throw new Error('No GPS data found in file — cannot build map track');
   const lats    = withGps.map(r => r.lat);
   const lons    = withGps.map(r => r.lon);
   const latMin  = Math.min(...lats), latMax = Math.max(...lats);
@@ -738,3 +751,61 @@ for (const [label, result] of legacyChecks) {
   console.log(`  ${result ? '[PASS]' : '[FAIL]'} ${label}`);
 }
 console.log(legacyAllPass ? '\nLegacy format: all checks passed.' : '\nLegacy format: SOME CHECKS FAILED.');
+
+// ---------------------------------------------------------------------------
+// Third file: 22966719708_ACTIVITY.fit (bare .fit, diagnosis run)
+// ---------------------------------------------------------------------------
+console.log('\n=== Third file: 22966719708_ACTIVITY.fit ===');
+const fit3Path = path.join(__dirname, 'examples', '22966719708_ACTIVITY.fit');
+const fit3Buf  = loadFit(fit3Path);
+console.log(`FIT file size: ${fit3Buf.length} bytes`);
+
+const { records: rec3, devFields: dev3 } = parseFit(fit3Buf);
+console.log(`Records parsed: ${rec3.length}`);
+
+console.log('\nDeveloper fields:');
+for (const [idx, fields] of Object.entries(dev3)) {
+  for (const [fnum, meta] of Object.entries(fields)) {
+    console.log(`  devDataIdx=${idx}  fieldDefNum=${fnum}  name="${meta.name}"  baseType=0x${meta.baseType.toString(16)}`);
+  }
+}
+
+const ch3     = detectChannels(rec3);
+const withGps3 = rec3.filter(r => r.lat != null);
+console.log('\nChannels detected:', Object.keys(ch3).join(', ') || '(none)');
+console.log(`Records with valid GPS: ${withGps3.length} / ${rec3.length}`);
+
+// Sample pressure values to confirm they are non-zero
+const psiSample = rec3.slice(0, 10).map(r => r.pressure_psi?.toFixed(4) ?? 'undef');
+console.log('pressure_psi sample (first 10):', psiSample.join(', '));
+
+// Attempt pipeline
+const diag3 = [];
+diag3.push(['records parsed > 0',            rec3.length > 0]);
+diag3.push(['pressure_psi channel present',  'pressure_psi' in ch3]);
+diag3.push(['pressure_psi not all-zero',      ch3.pressure_psi?.some(v => v !== 0) ?? false]);
+diag3.push(['GPS records present',           withGps3.length > 0]);
+
+let DATA3;
+try {
+  DATA3 = processRecords(rec3);
+  diag3.push(['pipeline runs without error', true]);
+  diag3.push(['segments produced > 0',       DATA3.segments.length > 0]);
+  console.log('\nPipeline output:');
+  console.log(`  primary channel: ${DATA3.primaryKey}`);
+  console.log(`  segments:        ${DATA3.segments.length}`);
+  console.log(`  duration:        ${DATA3.duration_s} s`);
+  console.log(`  data_min/max:    ${DATA3.data_min?.toFixed(4)} / ${DATA3.data_max?.toFixed(4)} PSI`);
+  console.log(`  center:          [${DATA3.center[0]?.toFixed(5)}, ${DATA3.center[1]?.toFixed(5)}]`);
+} catch (err) {
+  diag3.push(['pipeline runs without error', false]);
+  console.log('\nPipeline ERROR:', err.message);
+}
+
+console.log('\nDiagnostic checks:');
+let diag3AllPass = true;
+for (const [label, result] of diag3) {
+  if (!result) diag3AllPass = false;
+  console.log(`  ${result ? '[PASS]' : '[FAIL]'} ${label}`);
+}
+console.log(diag3AllPass ? '\nThird file: all checks passed.' : '\nThird file: root cause identified above.');

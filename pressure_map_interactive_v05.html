@@ -705,6 +705,8 @@ function processRecords(records) {
   const pct       = (p) => sortedP[Math.max(0, Math.floor(sortedP.length * p) - 1)];
 
   const withGps = records.filter(r => r.lat != null);
+  if (withGps.length === 0)
+    throw new Error('No GPS data found in file — cannot build map track');
   const lats = withGps.map(r => r.lat), lons = withGps.map(r => r.lon);
   const latMin = Math.min(...lats), latMax = Math.max(...lats);
   const lonMin = Math.min(...lons), lonMax = Math.max(...lons);

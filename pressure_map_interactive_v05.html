@@ -621,7 +621,7 @@ const SG_COEFFS = (() => {
 
 function _detectChannels(records) {
   const ch = {};
-  for (const key of ['pressure_le', 'pressure_st']) {
+  for (const key of ['pressure_le', 'pressure_st', 'pressure_psi']) {
     const v = records.map(r => r[key] ?? 0);
     if (v.some(x => x !== 0)) ch[key] = v;
   }
@@ -689,7 +689,9 @@ function processRecords(records) {
   const channels = _detectChannels(records);
   if (!Object.keys(channels).length) throw new Error('No pressure data found — check sensor pairing');
 
-  const primaryKey  = 'pressure_le' in channels ? 'pressure_le' : 'pressure_st';
+  const primaryKey  = 'pressure_le' in channels ? 'pressure_le'
+                    : 'pressure_st' in channels ? 'pressure_st'
+                    : 'pressure_psi';
   const rawPressure = channels[primaryKey];
   const smoothed    = _savgol(_fillZeros(rawPressure));
 

@@ -202,7 +202,8 @@ function readRecord(buf, pos, def, devFields, lastTs, fromCompressed) {
         const meta = dfi[df.defNum];
         if (meta) {
           const name = meta.name;
-          if (name === 'pressure_le' || name === 'pressure_st' || name === 'pressure_ref') {
+          if (name === 'pressure_le' || name === 'pressure_st' ||
+              name === 'pressure_ref' || name === 'pressure_psi') {
             rec[name] = val;
           }
         }
@@ -348,7 +349,7 @@ const SG_COEFFS = (() => {
 // Identify which channels have real data (not all-zero).
 function detectChannels(records) {
   const channels = {};
-  for (const key of ['pressure_le', 'pressure_st']) {
+  for (const key of ['pressure_le', 'pressure_st', 'pressure_psi']) {
     const vals = records.map(r => r[key] ?? 0);
     if (vals.some(v => v !== 0)) channels[key] = vals;
   }
@@ -432,7 +433,9 @@ function processRecords(records) {
   const channels = detectChannels(records);
   if (!Object.keys(channels).length) throw new Error('No pressure channels present');
 
-  const primaryKey  = 'pressure_le' in channels ? 'pressure_le' : 'pressure_st';
+  const primaryKey  = 'pressure_le' in channels ? 'pressure_le'
+                    : 'pressure_st' in channels ? 'pressure_st'
+                    : 'pressure_psi';
   const rawPressure = channels[primaryKey];
   const filled      = fillZeros(rawPressure);
   const smoothed    = savgolSmooth(filled);
@@ -678,3 +681,60 @@ console.log(`  ${pressureOk   ?'[OK]':'[FAIL]'} Pressure p99 diff ≤ 0.05 PSI (
 console.log(`  ${metaAllOk    ?'[OK]':'[FAIL]'} All metadata within tolerance`);
 const allOk = segCountOk && gpsOk && pressureOk && metaAllOk;
 console.log(allOk ? '\nStep 6 PASSED — pipeline output matches v04.' : '\nStep 6 FAILED — see diffs above.');
+
+// ---------------------------------------------------------------------------
+// Legacy-format validation: 22483130534.zip (single pressure_psi field)
+// ---------------------------------------------------------------------------
+console.log('\n=== Legacy format: 22483130534.zip ===');
+const zip2Path = path.join(__dirname, 'examples', '22483130534.zip');
+const zip2Buf  = fs.readFileSync(zip2Path);
+const fit2Buf  = unzipFirst(zip2Buf);
+console.log(`FIT file size: ${fit2Buf.length} bytes`);
+
+const { records: rec2, devFields: dev2 } = parseFit(fit2Buf);
+
+console.log('\nDeveloper fields:');
+for (const [idx, fields] of Object.entries(dev2)) {
+  for (const [fnum, meta] of Object.entries(fields)) {
+    console.log(`  devDataIdx=${idx}  fieldDefNum=${fnum}  name="${meta.name}"  baseType=0x${meta.baseType.toString(16)}`);
+  }
+}
+
+const ch2 = detectChannels(rec2);
+console.log('\nChannels detected:', Object.keys(ch2).join(', ') || '(none)');
+
+const legacyChecks = [];
+legacyChecks.push(['records parsed > 0',                rec2.length > 0]);
+legacyChecks.push(['pressure_psi channel present',      'pressure_psi' in ch2]);
+legacyChecks.push(['pressure_psi not all-zero',         ch2.pressure_psi?.some(v => v !== 0) ?? false]);
+legacyChecks.push(['pressure_le NOT present (old fmt)', !('pressure_le' in ch2)]);
+
+let DATA2;
+try {
+  DATA2 = processRecords(rec2);
+  legacyChecks.push(['pipeline runs without error',     true]);
+  legacyChecks.push(['segments produced > 0',           DATA2.segments.length > 0]);
+  legacyChecks.push(['primaryKey is pressure_psi',      DATA2.primaryKey === 'pressure_psi']);
+  const lats2 = rec2.filter(r => r.lat != null).map(r => r.lat);
+  const latOk = lats2.length > 0 && lats2.every(la => la > -90 && la < 90);
+  legacyChecks.push(['GPS coordinates plausible',       latOk]);
+
+  console.log(`\nPipeline output:`);
+  console.log(`  primary channel:  ${DATA2.primaryKey}`);
+  console.log(`  segments:         ${DATA2.segments.length}`);
+  console.log(`  duration:         ${DATA2.duration_s} s`);
+  console.log(`  data_min/max:     ${DATA2.data_min.toFixed(4)} / ${DATA2.data_max.toFixed(4)} PSI`);
+  console.log(`  center:           [${DATA2.center[0].toFixed(5)}, ${DATA2.center[1].toFixed(5)}]`);
+  console.log(`  first segment:    ${JSON.stringify(DATA2.segments[0])}`);
+} catch (err) {
+  legacyChecks.push(['pipeline runs without error', false]);
+  console.error('Pipeline error:', err.message);
+}
+
+console.log('\nLegacy format checks:');
+let legacyAllPass = true;
+for (const [label, result] of legacyChecks) {
+  if (!result) legacyAllPass = false;
+  console.log(`  ${result ? '[PASS]' : '[FAIL]'} ${label}`);
+}
+console.log(legacyAllPass ? '\nLegacy format: all checks passed.' : '\nLegacy format: SOME CHECKS FAILED.');

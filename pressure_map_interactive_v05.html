@@ -17,16 +17,16 @@
   --grey-mid:   #2a2a2a;
   --grey-light: #888;
   --grey-subtle:#444;
-  /* vis-state palette (v04 carry-forward) */
-  --brand-ink:  #222426;
-  --brand-red:  #c44536;
-  --brand-bg:   #f5f3f0;
-  --warm-grey:  #ece9e3;
-  --panel:      #ffffff;
-  --border:     #e3dfd7;
-  --muted:      #6b6b6b;
-  --label:      #4a4a4a;
-  --soft-shadow:0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04);
+  /* vis-state palette (dark brand) */
+  --brand-ink:  #e8e8e8;
+  --brand-red:  #E8291C;
+  --brand-bg:   #0a0a0a;
+  --warm-grey:  #000000;
+  --panel:      #111111;
+  --border:     #2a2a2a;
+  --muted:      #888888;
+  --label:      #aaaaaa;
+  --soft-shadow:0 0 0 1px rgba(255,255,255,.06);
 }
 html, body { height: 100%; }
 body {
@@ -187,7 +187,7 @@ body {
   box-sizing: border-box;
   background: var(--brand-bg);
   color: var(--brand-ink);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -258,7 +258,7 @@ body {
 #vis .slider-wrap  { position: relative; margin: 2px 4px; height: 26px; }
 #vis .slider-track {
   position: absolute; top: 11px; left: 0; right: 0; height: 6px;
-  background: #d8d4cc; border-radius: 3px;
+  background: #2a2a2a; border-radius: 3px;
 }
 #vis .slider-range {
   position: absolute; top: 11px; height: 6px;
@@ -268,12 +268,12 @@ body {
 }
 #vis .slider-thumb {
   position: absolute; top: 3px; width: 22px; height: 22px;
-  border-radius: 50%; background: white; border: 2px solid var(--label);
+  border-radius: 50%; background: #e8e8e8; border: 2px solid var(--label);
   cursor: grab; transform: translateX(-11px); user-select: none;
-  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  box-shadow: 0 1px 4px rgba(0,0,0,.6);
   transition: box-shadow 60ms ease;
 }
-#vis .slider-thumb:hover { box-shadow: 0 2px 5px rgba(0,0,0,.30); }
+#vis .slider-thumb:hover { box-shadow: 0 2px 6px rgba(0,0,0,.8); }
 #vis .slider-thumb:active { cursor: grabbing; }
 #vis .thumb-min { border-color: #2c7bb6; }
 #vis .thumb-max { border-color: #d7191c; }
@@ -287,32 +287,32 @@ body {
 #vis .info { font-size: 10px; color: var(--muted); margin-top: 2px; }
 #vis button {
   padding: 4px 11px; font-size: 11px;
-  border-radius: 5px; border: 1px solid #c8c4bc;
-  background: white; color: var(--brand-ink);
+  border-radius: 5px; border: 1px solid #2a2a2a;
+  background: #1a1a1a; color: var(--brand-ink);
   cursor: pointer; margin-right: 5px; margin-top: 4px;
   font-weight: 500;
   transition: background 80ms ease, border-color 80ms ease;
 }
-#vis button:hover  { background: #faf8f4; border-color: var(--brand-ink); }
-#vis button:active { background: #f0ece4; }
+#vis button:hover  { background: #242424; border-color: #888; }
+#vis button:active { background: #2a2a2a; }
 /* Time slider */
 #vis .time-slider-wrap { position: relative; margin: 2px 4px; height: 26px; }
 #vis .time-slider-track {
   position: absolute; top: 11px; left: 0; right: 0; height: 6px;
-  background: #d8d4cc; border-radius: 3px;
+  background: #2a2a2a; border-radius: 3px;
 }
 #vis .time-slider-range {
   position: absolute; top: 11px; height: 6px;
-  background: var(--label); border-radius: 3px; pointer-events: none;
+  background: #666666; border-radius: 3px; pointer-events: none;
 }
 #vis .time-thumb {
   position: absolute; top: 3px; width: 22px; height: 22px;
-  border-radius: 50%; background: white; border: 2px solid var(--label);
+  border-radius: 50%; background: #e8e8e8; border: 2px solid var(--label);
   cursor: grab; transform: translateX(-11px); user-select: none;
-  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  box-shadow: 0 1px 4px rgba(0,0,0,.6);
   transition: box-shadow 60ms ease;
 }
-#vis .time-thumb:hover  { box-shadow: 0 2px 5px rgba(0,0,0,.30); }
+#vis .time-thumb:hover  { box-shadow: 0 2px 6px rgba(0,0,0,.8); }
 #vis .time-thumb:active { cursor: grabbing; }
 #vis .time-values {
   display: flex; justify-content: space-between;
@@ -388,10 +388,10 @@ body {
     <div class="v-header">
       <div class="v-logo">
         <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M 13.6 71 A 42 42 0 1 1 86.4 71" fill="none" stroke="#222426" stroke-width="11" stroke-linecap="round"/>
-          <circle cx="50" cy="50" r="10" fill="#c44536"/>
-          <polygon points="50,42 44,48 22,24" fill="#c44536"/>
-          <polygon points="50,42 56,48 22,24" fill="#c44536"/>
+          <path d="M 13.6 71 A 42 42 0 1 1 86.4 71" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round"/>
+          <circle cx="50" cy="50" r="10" fill="#E8291C"/>
+          <polygon points="50,42 44,48 22,24" fill="#E8291C"/>
+          <polygon points="50,42 56,48 22,24" fill="#E8291C"/>
         </svg>
         <span>PressureWerx</span>
       </div>
@@ -933,23 +933,23 @@ function renderVisualization(DATA) {
       const yS=p=>TG_PT+(1-(p-yMin)/(yMax-yMin))*pH;
       const xS=i=>TG_PL+(i/N_SEG)*pW;
 
-      tgSvg.appendChild(el('rect',{x:TG_PL,y:TG_PT,width:pW,height:pH,fill:'none',stroke:'#d8d4cc','stroke-width':'0.5'}));
+      tgSvg.appendChild(el('rect',{x:TG_PL,y:TG_PT,width:pW,height:pH,fill:'none',stroke:'#2a2a2a','stroke-width':'0.5'}));
       for(let y=yMin;y<=yMax+1e-9;y+=0.5){
         const yy=yS(y);
-        tgSvg.appendChild(el('line',{x1:TG_PL,x2:TG_W-TG_PR,y1:yy,y2:yy,stroke:'#d8d4cc','stroke-width':'0.5'}));
-        const t=el('text',{x:TG_PL-4,y:yy+3,'font-size':'9',fill:'#6b6b6b','text-anchor':'end'});
+        tgSvg.appendChild(el('line',{x1:TG_PL,x2:TG_W-TG_PR,y1:yy,y2:yy,stroke:'#2a2a2a','stroke-width':'0.5'}));
+        const t=el('text',{x:TG_PL-4,y:yy+3,'font-size':'9',fill:'#666666','text-anchor':'end'});
         t.textContent=y.toFixed(1); tgSvg.appendChild(t);
       }
       const totMin=DATA.duration_s/60, te=totMin<=30?5:(totMin<=90?15:30);
       const [sh2,sm2,ss3]=DATA.t_start_str.split(':').map(Number), sBase=sh2*3600+sm2*60+ss3;
       for(let t=0;t<=DATA.duration_s;t+=te*60){
         const xx=xS((t/DATA.duration_s)*N_SEG);
-        tgSvg.appendChild(el('line',{x1:xx,x2:xx,y1:TG_H-TG_PB,y2:TG_H-TG_PB+3,stroke:'#a8a39a','stroke-width':'0.5'}));
+        tgSvg.appendChild(el('line',{x1:xx,x2:xx,y1:TG_H-TG_PB,y2:TG_H-TG_PB+3,stroke:'#444444','stroke-width':'0.5'}));
         const tot=sBase+t, H2=Math.floor(tot/3600)%24, M2=Math.floor((tot%3600)/60);
-        const lb=el('text',{x:xx,y:TG_H-4,'font-size':'9',fill:'#6b6b6b','text-anchor':'middle'});
+        const lb=el('text',{x:xx,y:TG_H-4,'font-size':'9',fill:'#666666','text-anchor':'middle'});
         lb.textContent=`${String(H2).padStart(2,'0')}:${String(M2).padStart(2,'0')}`; tgSvg.appendChild(lb);
       }
-      const yl=el('text',{x:4,y:TG_PT+6,'font-size':'9',fill:'#6b6b6b'}); yl.textContent='PSI'; tgSvg.appendChild(yl);
+      const yl=el('text',{x:4,y:TG_PT+6,'font-size':'9',fill:'#666666'}); yl.textContent='PSI'; tgSvg.appendChild(yl);
 
       const pressures=DATA.segments.map(s=>s[4]);
       for(let i=0;i<N_SEG;i++){
@@ -961,8 +961,8 @@ function renderVisualization(DATA) {
         });
         tgSvg.appendChild(seg);
       }
-      if(winStart>0){const v=el('line',{x1:xS(winStart),x2:xS(winStart),y1:TG_PT,y2:TG_H-TG_PB,stroke:'#4a4a4a','stroke-width':'1.2','stroke-dasharray':'4,2'});tgSvg.appendChild(v);}
-      if(winEnd<N_SEG){const v=el('line',{x1:xS(winEnd),x2:xS(winEnd),y1:TG_PT,y2:TG_H-TG_PB,stroke:'#4a4a4a','stroke-width':'1.2','stroke-dasharray':'4,2'});tgSvg.appendChild(v);}
+      if(winStart>0){const v=el('line',{x1:xS(winStart),x2:xS(winStart),y1:TG_PT,y2:TG_H-TG_PB,stroke:'#888888','stroke-width':'1.2','stroke-dasharray':'4,2'});tgSvg.appendChild(v);}
+      if(winEnd<N_SEG){const v=el('line',{x1:xS(winEnd),x2:xS(winEnd),y1:TG_PT,y2:TG_H-TG_PB,stroke:'#888888','stroke-width':'1.2','stroke-dasharray':'4,2'});tgSvg.appendChild(v);}
     }
 
     function applyColors() {

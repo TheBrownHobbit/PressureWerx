@@ -32,11 +32,22 @@ tool. Every step was validated end-to-end before moving on.
 - **Legacy FIT format** (`pressure_psi` single field) supported by extending `detectChannels`
   and the primary-key selection to fall back from `pressure_le` → `pressure_st` → `pressure_psi`.
   Validated against `examples/22483130534.zip` (4h 15m session, 7,237 segments, 7.44–9.47 PSI).
+- **Third example file** (`examples/22966719708_ACTIVITY.fit`) diagnosed and validated: bare `.fit`
+  (no ZIP wrapper), `pressure_psi` format, 1h 37m, 2,931 segments, 8.21–9.07 PSI. The file was
+  actually working — it had been tested before `pressure_psi` support was added. Test script now
+  handles both bare `.fit` and `.zip` inputs via a `loadFit()` helper.
+- **GPS-absent guard** added to `processRecords` in both files: if `withGps.length === 0`, throws
+  `'No GPS data found in file — cannot build map track'` instead of a cryptic `TypeError`.
+  Handles indoor sessions or devices without a GPS lock.
+- **Date field fixed**: the vis header previously showed `Date —`. FIT timestamps are absolute
+  UTC (seconds since 1989-12-31), so `t_date_str` is now computed via `toDateStr(tStart)` and
+  returned from `processRecords`. Format: `"Sun, 07 Jun 2026"`. Both `pressure_map_interactive_v05.html`
+  and `fit_parser_test.js` updated.
 
 **Final deliverable:**
 
-- `pressure_map_interactive_v05.html` — 198 KB, fully self-contained (no build tools, no server)
-- `fit_parser_test.js` — Node.js validation script for both FIT formats
+- `pressure_map_interactive_v05.html` — fully self-contained (no build tools, no server)
+- `fit_parser_test.js` — Node.js validation harness; run with `node fit_parser_test.js`
 
 ---
 
@@ -169,8 +180,9 @@ On touch devices the R/T/F shortcuts are invisible affordances. Either:
 |---|---|
 | `pressure_map_interactive_v05.html` | Current deliverable — all v05 code lives here |
 | `fit_parser_test.js` | Node.js validation harness — run with `node fit_parser_test.js` |
-| `examples/23157999972.zip` | Current-format FIT (2h 11m session, `pressure_le` + `pressure_st`) |
-| `examples/22483130534.zip` | Legacy-format FIT (4h 15m session, `pressure_psi` only) |
+| `examples/23157999972.zip` | Current-format FIT (2h 11m, `pressure_le` + `pressure_st`) — used as embedded example |
+| `examples/22483130534.zip` | Legacy-format FIT (4h 15m, `pressure_psi` only) |
+| `examples/22966719708_ACTIVITY.fit` | Bare `.fit` (no ZIP), `pressure_psi` format, 1h 37m |
 | `docs/v05_handoff.md` | Original v05 build spec — authoritative reference for data pipeline decisions |
 | `docs/wing_pressure_visualization.md` | Full processing spec — smoothing params, colour scale, layout decisions |
 | `index.html` | Marketing site — brand reference for colours, fonts, logo |

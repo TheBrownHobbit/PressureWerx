@@ -136,21 +136,28 @@ body {
   min-height: 18px;
 }
 
+.load-examples {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
 .load-example {
-  background: none;
-  border: none;
+  background: transparent;
+  border: 1px solid #333;
   color: var(--grey-light);
   font-family: 'Barlow', sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
-  margin-top: 18px;
-  padding: 4px 0;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--grey-subtle);
-  transition: color .15s;
+  padding: 6px 14px;
+  border-radius: 4px;
+  transition: border-color .15s, color .15s;
+  white-space: nowrap;
 }
-.load-example:hover { color: var(--white); }
+.load-example:hover:not(:disabled) { border-color: #666; color: var(--white); }
+.load-example:disabled { opacity: 0.3; cursor: not-allowed; }
 
 /* ── Processing overlay ────────────────────────────────────────────────── */
 #processing {
@@ -475,9 +482,11 @@ body {
       <input type="file" id="fileInput" accept=".fit,.zip" style="display:none" aria-label="Choose a FIT or ZIP file">
     </label>
 
-    <button class="load-example" id="loadExample" type="button">
-      Load example session
-    </button>
+    <div class="load-examples">
+      <button class="load-example" id="loadExample1" type="button">Load Example Session 1</button>
+      <button class="load-example" id="loadExample2" type="button" disabled>Load Example Session 2</button>
+      <button class="load-example" id="loadExample3" type="button" disabled>Load Example Session 3</button>
+    </div>
 
   </div>
 </div>
@@ -1231,7 +1240,7 @@ const EXAMPLE_ZIP_B64 = 'UEsDBBQACAgIAHOhx1wAAAAAAAAAAAAAAAAYAAAAMjMxNTc5OTk5NzJ
 // ── Event wiring ─────────────────────────────────────────────────────────────
 const dz      = document.getElementById('dropzone');
 const fileIn  = document.getElementById('fileInput');
-const loadBtn = document.getElementById('loadExample');
+const loadBtn = document.getElementById('loadExample1');
 
 fileIn.addEventListener('change', e => {
   const f = e.target.files[0];
@@ -1264,8 +1273,23 @@ function _b64ToAB(b64) {
 }
 
 loadBtn.addEventListener('click', () => {
-  handleFile(new File([_b64ToAB(EXAMPLE_ZIP_B64)], '23157999972.zip'));
+  handleFile(new File([_b64ToAB(EXAMPLE_ZIP_B64)], 'example_session_1.zip'));
 });
+// Sessions 2 & 3: replace null with a base64 ZIP string (same format as EXAMPLE_ZIP_B64) to enable
+const EXAMPLE_ZIP_B64_2 = null;
+const EXAMPLE_ZIP_B64_3 = null;
+if (EXAMPLE_ZIP_B64_2) {
+  document.getElementById('loadExample2').disabled = false;
+  document.getElementById('loadExample2').addEventListener('click', () => {
+    handleFile(new File([_b64ToAB(EXAMPLE_ZIP_B64_2)], 'example_session_2.zip'));
+  });
+}
+if (EXAMPLE_ZIP_B64_3) {
+  document.getElementById('loadExample3').disabled = false;
+  document.getElementById('loadExample3').addEventListener('click', () => {
+    handleFile(new File([_b64ToAB(EXAMPLE_ZIP_B64_3)], 'example_session_3.zip'));
+  });
+}
 </script>
 </body>
 </html>

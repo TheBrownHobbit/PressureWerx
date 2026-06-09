@@ -316,10 +316,13 @@ body {
 #vis .time-thumb:hover  { box-shadow: 0 2px 6px rgba(0,0,0,.8); }
 #vis .time-thumb:active { cursor: grabbing; }
 #vis .time-values {
-  display: flex; justify-content: space-between;
+  display: flex;
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   font-size: 12px; padding: 0 4px; color: var(--label);
 }
+#vis .time-values span { flex: 1; white-space: nowrap; }
+#vis .time-values span:nth-child(2) { text-align: center; }
+#vis .time-values span:last-child  { text-align: right; }
 #vis .time-values .duration { color: var(--muted); }
 @media (pointer: coarse) {
   #vis .slider-thumb, #vis .time-thumb {
@@ -482,7 +485,7 @@ body {
 
     <div id="map"></div>
 
-    <svg id="timegraph" viewBox="0 0 900 130"></svg>
+    <svg id="timegraph" viewBox="0 0 900 130" preserveAspectRatio="none"></svg>
 
     <div class="time-window">
       <div class="time-slider-wrap" id="timeSliderWrap">

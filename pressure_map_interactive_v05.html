@@ -241,7 +241,7 @@ body {
   width: 100%; display: block; margin-top: 8px;
 }
 #vis #map {
-  flex: 1 1 auto; min-height: 200px;
+  flex: 1 1 auto; min-height: clamp(200px, 40vh, 9999px);
   border-radius: 6px; margin-top: 6px;
   border: 1px solid var(--border);
 }
@@ -323,11 +323,37 @@ body {
 #vis .time-values .duration { color: var(--muted); }
 @media (pointer: coarse) {
   #vis .slider-thumb, #vis .time-thumb {
-    width: 28px; height: 28px; top: 0; transform: translateX(-14px);
+    width: 28px; height: 28px; top: 1px; transform: translateX(-14px);
+  }
+  #vis .slider-wrap, #vis .time-slider-wrap { height: 30px; }
+  #vis .load-diff {
+    font-size: 13px; padding: 6px 10px;
+    border: 1px solid var(--border); border-radius: 4px;
+    min-height: 36px; display: inline-flex; align-items: center;
   }
 }
 
 /* ── Mobile ────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .dropzone { min-height: clamp(120px, 25vw, 180px); padding: 20px 16px; }
+}
+@media (max-width: 768px) {
+  #vis .meta-strip { gap: 12px; font-size: 11px; }
+}
+@media (max-width: 580px) {
+  #vis .meta-strip .meta-sm-hide { display: none; }
+  #vis .meta-strip {
+    overflow-x: auto; white-space: nowrap; gap: 10px;
+    scrollbar-width: none;
+  }
+  #vis .meta-strip::-webkit-scrollbar { display: none; }
+}
+@media (max-width: 420px) {
+  #vis .meta-strip strong#metaFile {
+    max-width: 120px; overflow: hidden;
+    text-overflow: ellipsis; display: inline-block; vertical-align: bottom;
+  }
+}
 @media (max-width: 480px) {
   .logo-lockup { gap: 14px; }
   .logo-lockup svg { width: 52px; height: 52px; }
@@ -409,10 +435,10 @@ body {
       </div>
       <div class="meta-strip">
         <span>File <strong id="metaFile">—</strong></span>
-        <span>Date <strong id="metaDate">—</strong></span>
+        <span class="meta-sm-hide">Date <strong id="metaDate">—</strong></span>
         <span>Time <strong id="metaTime">—</strong></span>
         <span>Duration <strong id="metaDur">—</strong></span>
-        <span>Distance <strong id="metaDist">—</strong></span>
+        <span class="meta-sm-hide">Distance <strong id="metaDist">—</strong></span>
         <span>Mean <strong id="metaMean">—</strong></span>
       </div>
       <button class="load-diff" id="loadDiff" type="button">Load different file</button>

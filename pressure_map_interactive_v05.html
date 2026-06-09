@@ -333,12 +333,48 @@ body {
   }
 }
 
+/* ── Time window strip (sits between timegraph and pressure controls) ─── */
+#vis .time-window {
+  flex-shrink: 0;
+  margin-top: 4px;
+  padding: 0;
+}
+#vis .time-window .slider-title {
+  padding-left: 38px;
+  margin: 4px 0 0 0;
+}
+#vis .time-window .time-slider-wrap {
+  margin: 2px 8px 0 38px;
+}
+#vis .time-window .time-values {
+  padding: 0 8px 0 38px;
+}
+
 /* ── Mobile ────────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
   .dropzone { min-height: clamp(120px, 25vw, 180px); padding: 20px 16px; }
 }
 @media (max-width: 768px) {
+  #vis { padding: 4px; }
+  #vis .container { padding: 6px 8px; border-radius: 6px; }
+  #vis .v-header { gap: 8px; padding-bottom: 6px; }
+  #vis .v-header .v-logo span { font-size: 13px; }
+  #vis #timegraph { flex: 0 0 90px; }
+  #vis .controls { padding: 6px 8px 4px; margin-top: 6px; }
   #vis .meta-strip { gap: 12px; font-size: 11px; }
+}
+@media (max-width: 480px) {
+  #vis {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100svh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px;
+  }
+  #vis .container { height: auto; border-radius: 4px; padding: 6px; }
+  #vis #timegraph { flex: 0 0 70px; }
+  #vis #map { min-height: clamp(240px, 45vh, 9999px); }
 }
 @media (max-width: 580px) {
   #vis .meta-strip .meta-sm-hide { display: none; }
@@ -434,19 +470,33 @@ body {
         <span>PressureWerx</span>
       </div>
       <div class="meta-strip">
-        <span>File <strong id="metaFile">—</strong></span>
-        <span class="meta-sm-hide">Date <strong id="metaDate">—</strong></span>
-        <span>Time <strong id="metaTime">—</strong></span>
-        <span>Duration <strong id="metaDur">—</strong></span>
+        <span class="meta-sm-hide">File <strong id="metaFile">—</strong></span>
+        <span>Date <strong id="metaDate">—</strong></span>
+        <span class="meta-sm-hide">Time <strong id="metaTime">—</strong></span>
+        <span class="meta-sm-hide">Duration <strong id="metaDur">—</strong></span>
         <span class="meta-sm-hide">Distance <strong id="metaDist">—</strong></span>
         <span>Mean <strong id="metaMean">—</strong></span>
       </div>
       <button class="load-diff" id="loadDiff" type="button">Load different file</button>
     </div>
 
-    <svg id="timegraph" viewBox="0 0 900 130" preserveAspectRatio="none"></svg>
-
     <div id="map"></div>
+
+    <svg id="timegraph" viewBox="0 0 900 130"></svg>
+
+    <div class="time-window">
+      <div class="time-slider-wrap" id="timeSliderWrap">
+        <div class="time-slider-track"></div>
+        <div class="time-slider-range" id="timeRange"></div>
+        <div class="time-thumb" id="timeThumbStart"></div>
+        <div class="time-thumb" id="timeThumbEnd"></div>
+      </div>
+      <div class="time-values">
+        <span>Start: <strong id="timeStartLbl">—</strong></span>
+        <span class="duration">Window: <strong id="timeDurLbl">—</strong></span>
+        <span>End: <strong id="timeEndLbl">—</strong></span>
+      </div>
+    </div>
 
     <div class="controls">
       <div class="slider-title">Pressure Window</div>
@@ -460,20 +510,6 @@ body {
         <span class="val-min">Blue = <span id="vminLbl">—</span> PSI</span>
         <span class="val-max">Red = <span id="vmaxLbl">—</span> PSI</span>
       </div>
-
-      <div class="slider-title" style="margin-top:8px">Time Window</div>
-      <div class="time-slider-wrap" id="timeSliderWrap">
-        <div class="time-slider-track"></div>
-        <div class="time-slider-range" id="timeRange"></div>
-        <div class="time-thumb" id="timeThumbStart"></div>
-        <div class="time-thumb" id="timeThumbEnd"></div>
-      </div>
-      <div class="time-values">
-        <span>Start: <strong id="timeStartLbl">—</strong></span>
-        <span class="duration">Window: <strong id="timeDurLbl">—</strong></span>
-        <span>End: <strong id="timeEndLbl">—</strong></span>
-      </div>
-
       <div style="margin-top:4px">
         <button id="resetDefaults">Reset color</button>
         <button id="resetData">Full data range</button>
@@ -972,11 +1008,12 @@ function renderVisualization(DATA) {
     const cursorMarker = L.circleMarker([0,0], {radius:6, color:'#000', weight:2, fillColor:'#000', fillOpacity:0.85, pane:'markerPane'});
     map.fitBounds(DATA.bbox, { padding:[20,20] });
     setTimeout(()=>map.invalidateSize(),100);
-    window.addEventListener('resize', ()=>map.invalidateSize());
+    window.addEventListener('resize', ()=>{ map.invalidateSize(); drawTimeGraph(); });
 
     // ── 6. applyColors / drawTimeGraph ────────────────────────────────────
     const tgSvg = document.getElementById('timegraph');
     const TG_W=900,TG_H=130,TG_PL=38,TG_PR=8,TG_PT=8,TG_PB=18;
+    let tgEffW = TG_W;
     const NS='http://www.w3.org/2000/svg';
     function el(tag,attrs){
       const e=document.createElementNS(NS,tag);
@@ -987,7 +1024,7 @@ function renderVisualization(DATA) {
     polylines.forEach((pl,i)=>{
       pl.on('mouseover',()=>{
         tgSvg.querySelector('#map-cursor')?.remove();
-        const x=TG_PL+(i/N_SEG)*(TG_W-TG_PL-TG_PR);
+        const x=TG_PL+(i/N_SEG)*(tgEffW-TG_PL-TG_PR);
         tgSvg.appendChild(el('line',{id:'map-cursor',x1:x,y1:TG_PT,x2:x,y2:TG_H-TG_PB,stroke:'#dcdcdc','stroke-width':'1.2'}));
       });
       pl.on('mouseout',()=>tgSvg.querySelector('#map-cursor')?.remove());
@@ -995,7 +1032,9 @@ function renderVisualization(DATA) {
 
     function drawTimeGraph() {
       while(tgSvg.firstChild) tgSvg.removeChild(tgSvg.firstChild);
-      const pW=TG_W-TG_PL-TG_PR, pH=TG_H-TG_PT-TG_PB;
+      tgEffW = Math.round(tgSvg.getBoundingClientRect().width) || TG_W;
+      tgSvg.setAttribute('viewBox', `0 0 ${tgEffW} ${TG_H}`);
+      const pW=tgEffW-TG_PL-TG_PR, pH=TG_H-TG_PT-TG_PB;
       const yMin=Math.floor(DATA.data_min*2)/2, yMax=Math.ceil(DATA.data_max*2)/2;
       const yS=p=>TG_PT+(1-(p-yMin)/(yMax-yMin))*pH;
       const xS=i=>TG_PL+(i/N_SEG)*pW;
@@ -1003,7 +1042,7 @@ function renderVisualization(DATA) {
       tgSvg.appendChild(el('rect',{x:TG_PL,y:TG_PT,width:pW,height:pH,fill:'none',stroke:'#2a2a2a','stroke-width':'0.5'}));
       for(let y=yMin;y<=yMax+1e-9;y+=0.5){
         const yy=yS(y);
-        tgSvg.appendChild(el('line',{x1:TG_PL,x2:TG_W-TG_PR,y1:yy,y2:yy,stroke:'#2a2a2a','stroke-width':'0.5'}));
+        tgSvg.appendChild(el('line',{x1:TG_PL,x2:tgEffW-TG_PR,y1:yy,y2:yy,stroke:'#2a2a2a','stroke-width':'0.5'}));
         const t=el('text',{x:TG_PL-4,y:yy+3,'font-size':'9',fill:'#666666','text-anchor':'end'});
         t.textContent=y.toFixed(1); tgSvg.appendChild(t);
       }
@@ -1037,14 +1076,14 @@ function renderVisualization(DATA) {
       const overlay=el('rect',{x:TG_PL,y:TG_PT,width:pW,height:pH,fill:'none','pointer-events':'all',cursor:'crosshair'});
       overlay.addEventListener('mousemove',e=>{
         const r=tgSvg.getBoundingClientRect();
-        const svgX=(e.clientX-r.left)*(TG_W/r.width);
+        const svgX=(e.clientX-r.left)*(tgEffW/r.width);
         const idx=Math.max(0,Math.min(N_SEG-1,Math.round((svgX-TG_PL)/pW*N_SEG)));
         const psi=pressures[idx];
         const tot=sBase+(idx/N_SEG)*DATA.duration_s;
         const H3=Math.floor(tot/3600)%24, M3=Math.floor((tot%3600)/60), S3=Math.floor(tot%60);
         tipTxt.textContent=`${psi.toFixed(2)} PSI  ${String(H3).padStart(2,'0')}:${String(M3).padStart(2,'0')}:${String(S3).padStart(2,'0')}`;
         const tw=tipTxt.getComputedTextLength()+12, th=16;
-        const tx=Math.max(TG_PL+tw/2,Math.min(TG_W-TG_PR-tw/2,svgX));
+        const tx=Math.max(TG_PL+tw/2,Math.min(tgEffW-TG_PR-tw/2,svgX));
         tipBg.setAttribute('x',tx-tw/2); tipBg.setAttribute('y',TG_PT+2);
         tipBg.setAttribute('width',tw); tipBg.setAttribute('height',th);
         tipTxt.setAttribute('x',tx); tipTxt.setAttribute('y',TG_PT+2+th/2);

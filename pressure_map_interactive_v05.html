@@ -408,6 +408,7 @@ body {
         <span>PressureWerx</span>
       </div>
       <div class="meta-strip">
+        <span>File <strong id="metaFile">—</strong></span>
         <span>Date <strong id="metaDate">—</strong></span>
         <span>Time <strong id="metaTime">—</strong></span>
         <span>Duration <strong id="metaDur">—</strong></span>
@@ -770,6 +771,7 @@ async function extractFit(file) {
 async function handleFile(file) {
   _showProcessing(true);
   _setError('');
+  document.getElementById('metaFile').textContent = file.name;
   try {
     const ab             = await extractFit(file);
     const { records }    = parseFit(ab);

@@ -447,6 +447,21 @@ body {
 @media (max-width: 480px) {
   .leaflet-top.leaflet-right { top: auto; bottom: 8px; }
 }
+@media (orientation: landscape) and (max-height: 500px) {
+  #vis {
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  #vis .container {
+    height: auto;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  #vis #timegraph { flex: 0 0 55px; }
+  #vis #map { min-height: clamp(150px, 32vh, 9999px); }
+  #vis .controls { padding: 4px 8px; margin-top: 4px; }
+}
 </style>
 </head>
 <body>
@@ -1076,6 +1091,7 @@ function renderVisualization(DATA) {
       while(tgSvg.firstChild) tgSvg.removeChild(tgSvg.firstChild);
       tgEffW = Math.round(tgSvg.getBoundingClientRect().width) || TG_W;
       tgSvg.setAttribute('viewBox', `0 0 ${tgEffW} ${TG_H}`);
+      const fs = tgEffW < 500 ? 11 : 9;
       const pW=tgEffW-TG_PL-TG_PR, pH=TG_H-TG_PT-TG_PB;
       const yMin=Math.floor(DATA.data_min*2)/2, yMax=Math.ceil(DATA.data_max*2)/2;
       const yS=p=>TG_PT+(1-(p-yMin)/(yMax-yMin))*pH;
@@ -1085,7 +1101,7 @@ function renderVisualization(DATA) {
       for(let y=yMin;y<=yMax+1e-9;y+=0.5){
         const yy=yS(y);
         tgSvg.appendChild(el('line',{x1:TG_PL,x2:tgEffW-TG_PR,y1:yy,y2:yy,stroke:'#2a2a2a','stroke-width':'0.5'}));
-        const t=el('text',{x:TG_PL-4,y:yy+3,'font-size':'9',fill:'#666666','text-anchor':'end'});
+        const t=el('text',{x:TG_PL-4,y:yy+3,'font-size':String(fs),fill:'#666666','text-anchor':'end'});
         t.textContent=y.toFixed(1); tgSvg.appendChild(t);
       }
       const totMin=DATA.duration_s/60, te=totMin<=30?5:(totMin<=90?15:30);
@@ -1094,10 +1110,10 @@ function renderVisualization(DATA) {
         const xx=xS((t/DATA.duration_s)*N_SEG);
         tgSvg.appendChild(el('line',{x1:xx,x2:xx,y1:TG_H-TG_PB,y2:TG_H-TG_PB+3,stroke:'#444444','stroke-width':'0.5'}));
         const tot=sBase+t, H2=Math.floor(tot/3600)%24, M2=Math.floor((tot%3600)/60);
-        const lb=el('text',{x:xx,y:TG_H-4,'font-size':'9',fill:'#666666','text-anchor':'middle'});
+        const lb=el('text',{x:xx,y:TG_H-4,'font-size':String(fs),fill:'#666666','text-anchor':'middle'});
         lb.textContent=`${String(H2).padStart(2,'0')}:${String(M2).padStart(2,'0')}`; tgSvg.appendChild(lb);
       }
-      const yl=el('text',{x:4,y:TG_PT+6,'font-size':'9',fill:'#666666'}); yl.textContent='PSI'; tgSvg.appendChild(yl);
+      const yl=el('text',{x:4,y:TG_PT+6,'font-size':String(fs),fill:'#666666'}); yl.textContent='PSI'; tgSvg.appendChild(yl);
 
       const pressures=DATA.segments.map(s=>s[4]);
       for(let i=0;i<N_SEG;i++){
@@ -1113,12 +1129,12 @@ function renderVisualization(DATA) {
       if(winEnd<N_SEG){const v=el('line',{x1:xS(winEnd),x2:xS(winEnd),y1:TG_PT,y2:TG_H-TG_PB,stroke:'#888888','stroke-width':'1.2','stroke-dasharray':'4,2'});tgSvg.appendChild(v);}
       const tip=el('g',{visibility:'hidden'});
       const tipBg=el('rect',{rx:'3',ry:'3',fill:'#1a1a1a',stroke:'#555','stroke-width':'0.5'});
-      const tipTxt=el('text',{'font-size':'11',fill:'#e0e0e0','text-anchor':'middle','dominant-baseline':'middle'});
+      const tipTxt=el('text',{'font-size':String(fs+2),fill:'#e0e0e0','text-anchor':'middle','dominant-baseline':'middle'});
       tip.appendChild(tipBg); tip.appendChild(tipTxt); tgSvg.appendChild(tip);
       const overlay=el('rect',{x:TG_PL,y:TG_PT,width:pW,height:pH,fill:'none','pointer-events':'all',cursor:'crosshair'});
-      overlay.addEventListener('mousemove',e=>{
+      function showTip(clientX){
         const r=tgSvg.getBoundingClientRect();
-        const svgX=(e.clientX-r.left)*(tgEffW/r.width);
+        const svgX=(clientX-r.left)*(tgEffW/r.width);
         const idx=Math.max(0,Math.min(N_SEG-1,Math.round((svgX-TG_PL)/pW*N_SEG)));
         const psi=pressures[idx];
         const tot=sBase+(idx/N_SEG)*DATA.duration_s;
@@ -1133,11 +1149,16 @@ function renderVisualization(DATA) {
         const [la1c,lo1c,la2c,lo2c]=DATA.segments[idx];
         cursorMarker.setLatLng([(la1c+la2c)/2,(lo1c+lo2c)/2]);
         if(!map.hasLayer(cursorMarker)) cursorMarker.addTo(map);
-      });
-      overlay.addEventListener('mouseleave',()=>{
+      }
+      function hideTip(){
         tip.setAttribute('visibility','hidden');
         if(map.hasLayer(cursorMarker)) cursorMarker.remove();
-      });
+      }
+      overlay.addEventListener('mousemove',e=>showTip(e.clientX));
+      overlay.addEventListener('mouseleave',hideTip);
+      overlay.addEventListener('touchstart',e=>showTip(e.touches[0].clientX),{passive:true});
+      overlay.addEventListener('touchmove',e=>showTip(e.touches[0].clientX),{passive:true});
+      overlay.addEventListener('touchend',hideTip,{passive:true});
       tgSvg.appendChild(overlay);
     }
 

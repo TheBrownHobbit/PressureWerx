@@ -334,6 +334,10 @@ body {
     border: 1px solid var(--border); border-radius: 4px;
     min-height: 36px; display: inline-flex; align-items: center;
   }
+  .leaflet-control-zoom a {
+    width: 36px !important; height: 36px !important;
+    line-height: 36px !important; font-size: 18px !important;
+  }
 }
 
 /* ── Time window strip (sits between timegraph and pressure controls) ─── */
@@ -378,6 +382,29 @@ body {
   #vis .container { height: auto; border-radius: 4px; padding: 6px; }
   #vis #timegraph { flex: 0 0 70px; }
   #vis #map { min-height: clamp(240px, 45vh, 9999px); }
+
+  /* Chunk 6 — controls polish */
+  #vis .controls { margin-top: 6px; padding: 6px 8px 6px; }
+  #vis .slider-title { font-size: 9px; margin-top: 2px; }
+  #vis .values, #vis .time-values { font-size: 11px; }
+  #vis .time-values .duration { display: none; }
+  #vis button {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 12px;
+    margin-right: 0;
+  }
+  #vis .controls > div:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  #vis .info {
+    width: 100%;
+    margin-left: 0 !important;
+    margin-top: 2px;
+  }
 }
 @media (max-width: 580px) {
   #vis .meta-strip .meta-sm-hide { display: none; }
@@ -410,6 +437,9 @@ body {
   white-space: nowrap;
 }
 .leaflet-tooltip::before { display: none; }
+@media (max-width: 480px) {
+  .leaflet-top.leaflet-right { top: auto; bottom: 8px; }
+}
 </style>
 </head>
 <body>

@@ -1101,19 +1101,19 @@ function renderVisualization(DATA) {
       for(let y=yMin;y<=yMax+1e-9;y+=0.5){
         const yy=yS(y);
         tgSvg.appendChild(el('line',{x1:TG_PL,x2:tgEffW-TG_PR,y1:yy,y2:yy,stroke:'#2a2a2a','stroke-width':'0.5'}));
-        const t=el('text',{x:TG_PL-4,y:yy+3,'font-size':String(fs),fill:'#666666','text-anchor':'end'});
+        const t=el('text',{x:TG_PL-4,y:yy+3,'font-size':String(fs),fill:'rgba(255,255,255,.75)','text-anchor':'end'});
         t.textContent=y.toFixed(1); tgSvg.appendChild(t);
       }
       const totMin=DATA.duration_s/60, te=totMin<=30?5:(totMin<=90?15:30);
       const [sh2,sm2,ss3]=DATA.t_start_str.split(':').map(Number), sBase=sh2*3600+sm2*60+ss3;
       for(let t=0;t<=DATA.duration_s;t+=te*60){
         const xx=xS((t/DATA.duration_s)*N_SEG);
-        tgSvg.appendChild(el('line',{x1:xx,x2:xx,y1:TG_H-TG_PB,y2:TG_H-TG_PB+3,stroke:'#444444','stroke-width':'0.5'}));
+        tgSvg.appendChild(el('line',{x1:xx,x2:xx,y1:TG_H-TG_PB,y2:TG_H-TG_PB+3,stroke:'rgba(255,255,255,.35)','stroke-width':'0.5'}));
         const tot=sBase+t, H2=Math.floor(tot/3600)%24, M2=Math.floor((tot%3600)/60);
-        const lb=el('text',{x:xx,y:TG_H-4,'font-size':String(fs),fill:'#666666','text-anchor':'middle'});
+        const lb=el('text',{x:xx,y:TG_H-4,'font-size':String(fs),fill:'rgba(255,255,255,.75)','text-anchor':'middle'});
         lb.textContent=`${String(H2).padStart(2,'0')}:${String(M2).padStart(2,'0')}`; tgSvg.appendChild(lb);
       }
-      const yl=el('text',{x:4,y:TG_PT+6,'font-size':String(fs),fill:'#666666'}); yl.textContent='PSI'; tgSvg.appendChild(yl);
+      const yl=el('text',{x:4,y:TG_PT+6,'font-size':String(fs),fill:'rgba(255,255,255,.75)'}); yl.textContent='PSI'; tgSvg.appendChild(yl);
 
       const pressures=DATA.segments.map(s=>s[4]);
       for(let i=0;i<N_SEG;i++){

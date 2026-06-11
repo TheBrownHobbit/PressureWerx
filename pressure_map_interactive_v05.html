@@ -541,7 +541,7 @@ body {
 
     <svg id="timegraph" viewBox="0 0 900 130" preserveAspectRatio="none"></svg>
 
-    <div class="time-window">
+    <div class="time-window" id="timeWindowPanel">
       <div class="time-slider-wrap" id="timeSliderWrap">
         <div class="time-slider-track"></div>
         <div class="time-slider-range" id="timeRange"></div>
@@ -555,7 +555,7 @@ body {
       </div>
     </div>
 
-    <div class="controls">
+    <div class="controls" id="pressureControlsPanel">
       <div class="slider-title">Pressure Window</div>
       <div class="slider-wrap" id="sliderWrap">
         <div class="slider-track"></div>
@@ -818,27 +818,14 @@ function _buildSegs(records, smoothed, tStart) {
 }
 
 function processRecords(records) {
-  const channels = _detectChannels(records);
-  if (!Object.keys(channels).length) throw new Error('No pressure data found — check sensor pairing');
-
-  const primaryKey  = 'pressure_le' in channels ? 'pressure_le'
-                    : 'pressure_st' in channels ? 'pressure_st'
-                    : 'pressure_psi';
-  const rawPressure = channels[primaryKey];
-  const smoothed    = _savgol(_fillZeros(rawPressure));
-
-  const tStart = records[0].timestamp;
-  const tEnd   = records[records.length - 1].timestamp;
-  const { segments, segSeconds } = _buildSegs(records, smoothed, tStart);
-
-  const validIdx  = rawPressure.map((v, i) => v !== 0 ? i : -1).filter(i => i >= 0);
-  const vSmoothed = validIdx.map(i => smoothed[i]);
-  const sortedP   = vSmoothed.slice().sort((a, b) => a - b);
-  const pct       = (p) => sortedP[Math.max(0, Math.floor(sortedP.length * p) - 1)];
-
+  // GPS check first — no map is possible without coordinates
   const withGps = records.filter(r => r.lat != null);
   if (withGps.length === 0)
     throw new Error('No GPS data found in file — cannot build map track');
+
+  const tStart = records[0].timestamp;
+  const tEnd   = records[records.length - 1].timestamp;
+
   const lats = withGps.map(r => r.lat), lons = withGps.map(r => r.lon);
   const latMin = Math.min(...lats), latMax = Math.max(...lats);
   const lonMin = Math.min(...lons), lonMax = Math.max(...lons);
@@ -856,23 +843,46 @@ function processRecords(records) {
     return `${_DAYS[d.getUTCDay()]}, ${String(d.getUTCDate()).padStart(2,'0')} ${_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
   };
 
+  const channels  = _detectChannels(records);
+  const noPressure = !Object.keys(channels).length;
+
+  let segments, segSeconds, data_min, data_max, default_min, default_max, mean_pressure, primaryKey;
+
+  if (noPressure) {
+    const zeroSmoothed = new Float64Array(records.length);
+    ({ segments, segSeconds } = _buildSegs(records, zeroSmoothed, tStart));
+    data_min = 0; data_max = 0; default_min = 0; default_max = 0;
+    mean_pressure = 0; primaryKey = null;
+  } else {
+    primaryKey = 'pressure_le' in channels ? 'pressure_le'
+               : 'pressure_st' in channels ? 'pressure_st'
+               : 'pressure_psi';
+    const rawPressure = channels[primaryKey];
+    const smoothed    = _savgol(_fillZeros(rawPressure));
+    ({ segments, segSeconds } = _buildSegs(records, smoothed, tStart));
+    const validIdx  = rawPressure.map((v, i) => v !== 0 ? i : -1).filter(i => i >= 0);
+    const vSmoothed = validIdx.map(i => smoothed[i]);
+    const sortedP   = vSmoothed.slice().sort((a, b) => a - b);
+    const pct       = (p) => sortedP[Math.max(0, Math.floor(sortedP.length * p) - 1)];
+    data_min = sortedP[0]; data_max = sortedP[sortedP.length - 1];
+    default_min = pct(0.10); default_max = pct(0.90);
+    mean_pressure = vSmoothed.reduce((a,b)=>a+b,0) / vSmoothed.length;
+  }
+
   return {
     segments, seg_seconds: segSeconds,
     duration_s:    tEnd - tStart,
     t_date_str:    toDateStr(tStart),
     t_start_str:   toHMS(tStart),
     t_end_str:     toHMS(tEnd),
-    data_min:      sortedP[0],
-    data_max:      sortedP[sortedP.length - 1],
-    default_min:   pct(0.10),
-    default_max:   pct(0.90),
-    mean_pressure: vSmoothed.reduce((a,b)=>a+b,0) / vSmoothed.length,
+    data_min, data_max, default_min, default_max, mean_pressure,
     total_dist_km: totalDist / 1000,
     center: [meanLat, meanLon],
     bbox:   [[latMin, lonMin], [latMax, lonMax]],
     start:  [withGps[0].lat, withGps[0].lon],
     end:    [withGps[withGps.length-1].lat, withGps[withGps.length-1].lon],
     primaryKey,
+    noPressure,
   };
 }
 
@@ -941,6 +951,8 @@ function renderVisualization(DATA) {
   // ── 1. Tear down any previous session ──────────────────────────────────
   if (_vis && _vis.map) { _vis.map.remove(); }
   _vis = {};
+  document.getElementById('pressureControlsPanel').style.display = '';
+  document.getElementById('timeWindowPanel').style.display = '';
 
   // ── 2. Show vis panel, hide landing ────────────────────────────────────
   document.getElementById('landing').style.display = 'none';
@@ -970,9 +982,19 @@ function renderVisualization(DATA) {
     `${DATA.t_start_str.slice(0,5)} – ${DATA.t_end_str.slice(0,5)}`;
   document.getElementById('metaDur').textContent  = durStr;
   document.getElementById('metaDist').textContent = `${DATA.total_dist_km.toFixed(1)} km`;
-  document.getElementById('metaMean').textContent = `${DATA.mean_pressure.toFixed(2)} PSI`;
-  document.getElementById('dataRangeInfo').textContent =
-    `Data range: ${DATA.data_min.toFixed(3)} – ${DATA.data_max.toFixed(3)} PSI`;
+  if (DATA.noPressure) {
+    document.getElementById('metaMean').textContent = '—';
+    document.getElementById('dataRangeInfo').textContent = '';
+  } else {
+    document.getElementById('metaMean').textContent = `${DATA.mean_pressure.toFixed(2)} PSI`;
+    document.getElementById('dataRangeInfo').textContent =
+      `Data range: ${DATA.data_min.toFixed(3)} – ${DATA.data_max.toFixed(3)} PSI`;
+  }
+
+  if (DATA.noPressure) {
+    document.getElementById('pressureControlsPanel').style.display = 'none';
+    document.getElementById('timeWindowPanel').style.display = 'none';
+  }
 
   // ── 4. Slider state ──────────────────────────────────────────────────────
   const SMIN = DATA.data_min - 0.3, SMAX = DATA.data_max + 0.3;
@@ -1053,7 +1075,9 @@ function renderVisualization(DATA) {
       const tot0=sBase0+(i/N_SEG)*DATA.duration_s;
       const H0=Math.floor(tot0/3600)%24, M0=Math.floor((tot0%3600)/60), S0=Math.floor(tot0%60);
       pl.bindTooltip(
-        `${p.toFixed(2)} PSI  ${String(H0).padStart(2,'0')}:${String(M0).padStart(2,'0')}:${String(S0).padStart(2,'0')}`,
+        DATA.noPressure
+          ? `${String(H0).padStart(2,'0')}:${String(M0).padStart(2,'0')}:${String(S0).padStart(2,'0')}`
+          : `${p.toFixed(2)} PSI  ${String(H0).padStart(2,'0')}:${String(M0).padStart(2,'0')}:${String(S0).padStart(2,'0')}`,
         {sticky:true}
       );
       polylines.push(pl);
@@ -1065,7 +1089,7 @@ function renderVisualization(DATA) {
     const cursorMarker = L.circleMarker([0,0], {radius:6, color:'#000', weight:2, fillColor:'#000', fillOpacity:0.85, pane:'markerPane'});
     map.fitBounds(DATA.bbox, { padding:[20,20] });
     setTimeout(()=>map.invalidateSize(),100);
-    window.addEventListener('resize', ()=>{ map.invalidateSize(); drawTimeGraph(); });
+    window.addEventListener('resize', ()=>{ map.invalidateSize(); if(DATA.noPressure) drawNoPressureMessage(); else drawTimeGraph(); });
 
     // ── 6. applyColors / drawTimeGraph ────────────────────────────────────
     const tgSvg = document.getElementById('timegraph');
@@ -1078,14 +1102,16 @@ function renderVisualization(DATA) {
       return e;
     }
 
-    polylines.forEach((pl,i)=>{
-      pl.on('mouseover',()=>{
-        tgSvg.querySelector('#map-cursor')?.remove();
-        const x=TG_PL+(i/N_SEG)*(tgEffW-TG_PL-TG_PR);
-        tgSvg.appendChild(el('line',{id:'map-cursor',x1:x,y1:TG_PT,x2:x,y2:TG_H-TG_PB,stroke:'#dcdcdc','stroke-width':'1.2'}));
+    if (!DATA.noPressure) {
+      polylines.forEach((pl,i)=>{
+        pl.on('mouseover',()=>{
+          tgSvg.querySelector('#map-cursor')?.remove();
+          const x=TG_PL+(i/N_SEG)*(tgEffW-TG_PL-TG_PR);
+          tgSvg.appendChild(el('line',{id:'map-cursor',x1:x,y1:TG_PT,x2:x,y2:TG_H-TG_PB,stroke:'#dcdcdc','stroke-width':'1.2'}));
+        });
+        pl.on('mouseout',()=>tgSvg.querySelector('#map-cursor')?.remove());
       });
-      pl.on('mouseout',()=>tgSvg.querySelector('#map-cursor')?.remove());
-    });
+    }
 
     function drawTimeGraph() {
       while(tgSvg.firstChild) tgSvg.removeChild(tgSvg.firstChild);
@@ -1162,7 +1188,26 @@ function renderVisualization(DATA) {
       tgSvg.appendChild(overlay);
     }
 
+    function drawNoPressureMessage() {
+      while(tgSvg.firstChild) tgSvg.removeChild(tgSvg.firstChild);
+      tgEffW = Math.round(tgSvg.getBoundingClientRect().width) || TG_W;
+      tgSvg.setAttribute('viewBox', `0 0 ${tgEffW} ${TG_H}`);
+      const msg = el('text', {
+        x: String(tgEffW / 2), y: String(TG_H / 2),
+        'font-size': '13', fill: '#E8291C',
+        'text-anchor': 'middle', 'dominant-baseline': 'middle',
+        'font-family': "'Barlow', sans-serif",
+      });
+      msg.textContent = 'No pressure data found — check sensor pairing';
+      tgSvg.appendChild(msg);
+    }
+
     function applyColors() {
+      if (DATA.noPressure) {
+        for(let i=0;i<polylines.length;i++)
+          polylines[i].setStyle({color:'#E8291C',weight:2,opacity:0.95});
+        return;
+      }
       for(let i=0;i<polylines.length;i++){
         const pl=polylines[i], inW=(i>=winStart&&i<winEnd);
         pl.setStyle(inW
@@ -1218,6 +1263,7 @@ function renderVisualization(DATA) {
 
     const onKey=e=>{
       if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+      if(DATA.noPressure) return;
       if(e.key==='r'||e.key==='R'){vmin=DATA.default_min;vmax=DATA.default_max;updateThumbs();applyColors();}
       else if(e.key==='t'||e.key==='T'){winStart=0;winEnd=N_SEG;updateTimeThumbs();applyColors();}
       else if(e.key==='f'||e.key==='F'){vmin=DATA.data_min;vmax=DATA.data_max;updateThumbs();applyColors();}
@@ -1226,9 +1272,14 @@ function renderVisualization(DATA) {
     _vis.cleanupKeys = () => document.removeEventListener('keydown',onKey);
 
     // ── 9. Initial render ──────────────────────────────────────────────────
-    updateThumbs();
-    updateTimeThumbs();
-    applyColors();
+    if (DATA.noPressure) {
+      drawNoPressureMessage();
+      applyColors();
+    } else {
+      updateThumbs();
+      updateTimeThumbs();
+      applyColors();
+    }
 
   }, 50);  // end setTimeout — gives #vis time to paint before Leaflet measures
 }

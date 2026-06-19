@@ -331,6 +331,12 @@ body {
 #vis .time-values span:nth-child(2) { text-align: center; }
 #vis .time-values span:last-child  { text-align: right; }
 #vis .time-values .duration { color: var(--muted); }
+.interp-toggle-label {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; color: rgba(255,255,255,0.6);
+  cursor: pointer; user-select: none; white-space: nowrap; margin-left: 12px;
+}
+.interp-toggle-label input { cursor: pointer; accent-color: #aaa; }
 @media (pointer: coarse) {
   #vis .slider-thumb, #vis .time-thumb {
     width: 28px; height: 28px; top: 1px; transform: translateX(-14px);
@@ -552,6 +558,7 @@ body {
         <span>Start: <strong id="timeStartLbl">—</strong></span>
         <span class="duration">Window: <strong id="timeDurLbl">—</strong></span>
         <span>End: <strong id="timeEndLbl">—</strong></span>
+        <label class="interp-toggle-label"><input type="checkbox" id="showInterpChk"> Highlight Interpolated Data</label>
       </div>
     </div>
 
@@ -762,6 +769,7 @@ function _detectChannels(records) {
 
 function _fillZeros(arr) {
   const out = arr.slice();
+  const interp = new Uint8Array(arr.length);
   let i = 0;
   while (i < out.length) {
     if (out[i] !== 0) { i++; continue; }
@@ -772,10 +780,11 @@ function _fillZeros(arr) {
       if      (l  <  0)             out[k] = out[r];
       else if (r >= out.length)     out[k] = out[l];
       else  out[k] = out[l] + (out[r] - out[l]) * (k - l) / (r - l);
+      interp[k] = 1;
     }
     i = j;
   }
-  return out;
+  return { out, interp };
 }
 
 function _savgol(arr) {
@@ -800,11 +809,13 @@ function _haversine(la1, lo1, la2, lo2) {
   return 2*R*Math.asin(Math.sqrt(a));
 }
 
-function _buildSegs(records, smoothed, tStart) {
+function _buildSegs(records, smoothed, tStart, interp) {
   const DECIM = 2;
   // GPS-valid filter first, then decimate — matches Python pipeline behaviour
-  const gps = records.map((r, i) => ({ r, p: smoothed[i] })).filter(x => x.r.lat != null);
-  const segments = [], segSeconds = [];
+  const gps = records
+    .map((r, i) => ({ r, p: smoothed[i], interp: interp ? interp[i] : 0 }))
+    .filter(x => x.r.lat != null);
+  const segments = [], segSeconds = [], interpMask = [];
   for (let i = 0; i + DECIM < gps.length; i += DECIM) {
     const a = gps[i], b = gps[i + DECIM];
     segments.push([
@@ -813,8 +824,9 @@ function _buildSegs(records, smoothed, tStart) {
       +a.p.toFixed(4),
     ]);
     segSeconds.push(a.r.timestamp - tStart);
+    interpMask.push(a.interp || b.interp ? 1 : 0);
   }
-  return { segments, segSeconds };
+  return { segments, segSeconds, interpMask };
 }
 
 function processRecords(records) {
@@ -846,11 +858,11 @@ function processRecords(records) {
   const channels  = _detectChannels(records);
   const noPressure = !Object.keys(channels).length;
 
-  let segments, segSeconds, data_min, data_max, default_min, default_max, mean_pressure, primaryKey;
+  let segments, segSeconds, interpMask, data_min, data_max, default_min, default_max, mean_pressure, primaryKey;
 
   if (noPressure) {
     const zeroSmoothed = new Float64Array(records.length);
-    ({ segments, segSeconds } = _buildSegs(records, zeroSmoothed, tStart));
+    ({ segments, segSeconds, interpMask } = _buildSegs(records, zeroSmoothed, tStart));
     data_min = 0; data_max = 0; default_min = 0; default_max = 0;
     mean_pressure = 0; primaryKey = null;
   } else {
@@ -858,8 +870,9 @@ function processRecords(records) {
                : 'pressure_st' in channels ? 'pressure_st'
                : 'pressure_psi';
     const rawPressure = channels[primaryKey];
-    const smoothed    = _savgol(_fillZeros(rawPressure));
-    ({ segments, segSeconds } = _buildSegs(records, smoothed, tStart));
+    const { out: filled, interp: rawInterp } = _fillZeros(rawPressure);
+    const smoothed = _savgol(filled);
+    ({ segments, segSeconds, interpMask } = _buildSegs(records, smoothed, tStart, rawInterp));
     const validIdx  = rawPressure.map((v, i) => v !== 0 ? i : -1).filter(i => i >= 0);
     const vSmoothed = validIdx.map(i => smoothed[i]);
     const sortedP   = vSmoothed.slice().sort((a, b) => a - b);
@@ -883,6 +896,7 @@ function processRecords(records) {
     end:    [withGps[withGps.length-1].lat, withGps[withGps.length-1].lon],
     primaryKey,
     noPressure,
+    interpMask,
   };
 }
 
@@ -1141,6 +1155,22 @@ function renderVisualization(DATA) {
       }
       const yl=el('text',{x:4,y:TG_PT+6,'font-size':String(fs),fill:'rgba(255,255,255,.75)'}); yl.textContent='PSI'; tgSvg.appendChild(yl);
 
+      if (document.getElementById('showInterpChk').checked && DATA.interpMask) {
+        let runStart = -1;
+        for (let i = 0; i <= N_SEG; i++) {
+          const isInterp = i < N_SEG && DATA.interpMask[i];
+          if (isInterp && runStart < 0) { runStart = i; }
+          else if (!isInterp && runStart >= 0) {
+            tgSvg.appendChild(el('rect', {
+              x: String(xS(runStart)), y: String(TG_PT),
+              width: String(Math.max(1, xS(i) - xS(runStart))),
+              height: String(pH), fill: 'rgba(255,255,255,0.18)',
+            }));
+            runStart = -1;
+          }
+        }
+      }
+
       const pressures=DATA.segments.map(s=>s[4]);
       for(let i=0;i<N_SEG;i++){
         const p=pressures[i], inW=(i>=winStart&&i<winEnd);
@@ -1201,6 +1231,10 @@ function renderVisualization(DATA) {
       msg.textContent = 'No pressure data found — check sensor pairing';
       tgSvg.appendChild(msg);
     }
+
+    const interpChk = document.getElementById('showInterpChk');
+    interpChk.checked = true;
+    interpChk.addEventListener('change', drawTimeGraph);
 
     function applyColors() {
       if (DATA.noPressure) {
@@ -1363,5 +1397,6 @@ if (EXAMPLE_ZIP_B64_3) {
   });
 }
 </script>
+<script data-goatcounter="https://pressurewerx.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>

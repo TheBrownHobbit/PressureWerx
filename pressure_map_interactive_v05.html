@@ -497,10 +497,10 @@ body {
         <line x1="12" y1="12" x2="12" y2="21"/>
         <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
       </svg>
-      <span class="dz-primary">Drop a .fit or .zip file here</span>
+      <span class="dz-primary">Drop a .fit, .zip, or .csv file here</span>
       <span class="dz-sub">or click to browse</span>
       <span class="dz-error" id="dzError" aria-live="polite"></span>
-      <input type="file" id="fileInput" accept=".fit,.zip" style="display:none" aria-label="Choose a FIT or ZIP file">
+      <input type="file" id="fileInput" accept=".fit,.zip,.csv" style="display:none" aria-label="Choose a FIT, ZIP, or CSV file">
     </label>
 
     <div class="load-examples">
@@ -559,6 +559,7 @@ body {
         <span class="duration">Window: <strong id="timeDurLbl">—</strong></span>
         <span>End: <strong id="timeEndLbl">—</strong></span>
         <label class="interp-toggle-label"><input type="checkbox" id="showInterpChk"> Highlight Interpolated Data</label>
+        <label class="interp-toggle-label" id="strutToggleLabel" style="display:none"><input type="checkbox" id="showStrutChk" checked> Show Strut</label>
       </div>
     </div>
 
@@ -809,11 +810,11 @@ function _haversine(la1, lo1, la2, lo2) {
   return 2*R*Math.asin(Math.sqrt(a));
 }
 
-function _buildSegs(records, smoothed, tStart, interp) {
+function _buildSegs(records, smoothed, tStart, interp, smoothedST) {
   const DECIM = 2;
   // GPS-valid filter first, then decimate — matches Python pipeline behaviour
   const gps = records
-    .map((r, i) => ({ r, p: smoothed[i], interp: interp ? interp[i] : 0 }))
+    .map((r, i) => ({ r, p: smoothed[i], pST: smoothedST ? smoothedST[i] : null, interp: interp ? interp[i] : 0 }))
     .filter(x => x.r.lat != null);
   const segments = [], segSeconds = [], interpMask = [];
   for (let i = 0; i + DECIM < gps.length; i += DECIM) {
@@ -822,6 +823,7 @@ function _buildSegs(records, smoothed, tStart, interp) {
       +a.r.lat.toFixed(6), +a.r.lon.toFixed(6),
       +b.r.lat.toFixed(6), +b.r.lon.toFixed(6),
       +a.p.toFixed(4),
+      smoothedST ? +a.pST.toFixed(4) : null,
     ]);
     segSeconds.push(a.r.timestamp - tStart);
     interpMask.push(a.interp || b.interp ? 1 : 0);
@@ -859,6 +861,7 @@ function processRecords(records) {
   const noPressure = !Object.keys(channels).length;
 
   let segments, segSeconds, interpMask, data_min, data_max, default_min, default_max, mean_pressure, primaryKey;
+  let hasTwoSensors = false, data_min_st = null, data_max_st = null, mean_pressure_st = null;
 
   if (noPressure) {
     const zeroSmoothed = new Float64Array(records.length);
@@ -869,10 +872,27 @@ function processRecords(records) {
     primaryKey = 'pressure_le' in channels ? 'pressure_le'
                : 'pressure_st' in channels ? 'pressure_st'
                : 'pressure_psi';
+    const secondaryKey = (primaryKey === 'pressure_le' && 'pressure_st' in channels) ? 'pressure_st' : null;
+
     const rawPressure = channels[primaryKey];
     const { out: filled, interp: rawInterp } = _fillZeros(rawPressure);
     const smoothed = _savgol(filled);
-    ({ segments, segSeconds, interpMask } = _buildSegs(records, smoothed, tStart, rawInterp));
+
+    let smoothedST = null;
+    if (secondaryKey) {
+      const rawST = channels[secondaryKey];
+      const { out: filledST } = _fillZeros(rawST);
+      smoothedST = _savgol(filledST);
+      const validST     = rawST.map((v, i) => v !== 0 ? i : -1).filter(i => i >= 0);
+      const vSmoothedST = validST.map(i => smoothedST[i]);
+      const sortedST    = vSmoothedST.slice().sort((a, b) => a - b);
+      data_min_st      = sortedST[0];
+      data_max_st      = sortedST[sortedST.length - 1];
+      mean_pressure_st = vSmoothedST.reduce((a, b) => a + b, 0) / vSmoothedST.length;
+      hasTwoSensors    = true;
+    }
+
+    ({ segments, segSeconds, interpMask } = _buildSegs(records, smoothed, tStart, rawInterp, smoothedST));
     const validIdx  = rawPressure.map((v, i) => v !== 0 ? i : -1).filter(i => i >= 0);
     const vSmoothed = validIdx.map(i => smoothed[i]);
     const sortedP   = vSmoothed.slice().sort((a, b) => a - b);
@@ -897,6 +917,7 @@ function processRecords(records) {
     primaryKey,
     noPressure,
     interpMask,
+    hasTwoSensors, data_min_st, data_max_st, mean_pressure_st,
   };
 }
 
@@ -910,20 +931,104 @@ async function extractFit(file) {
   return entry.async('arraybuffer');
 }
 
+// ── CSV parser — converts PressureWerx CSV to FIT-compatible records ─────────
+function parseCSVFile(text, filename) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) throw new Error('CSV file is empty');
+  const headers = lines[0].split(',').map(h => h.trim());
+
+  // Legacy format detection
+  const isLegacyWingLog  = headers[0] === 'Timestamp' && headers.includes('LE_AdjustedPressure');
+  const isLegacyMultiLog = headers[0] === 'Timestamp' && headers[1] === 'TestName';
+  if (isLegacyWingLog || isLegacyMultiLog)
+    throw new Error('Legacy CSV format detected — please export a fresh session from the PressureWerx app');
+
+  // Derive session name from filename prefix
+  const base = filename.replace(/\.csv$/i, '');
+  let sessionName = base;
+  if (base.startsWith('WingLog_')) {
+    sessionName = base.replace(/^WingLog_/, '')
+                      .replace(/_\d{4}-\d{2}-\d{2}(_v\d+)?$/, '')
+                      .replace(/_/g, ' ');
+  } else if (base.startsWith('WatchLog_')) {
+    sessionName = base.replace(/^WatchLog_/, '');
+  } else if (base.startsWith('MultiLog_')) {
+    sessionName = base.replace(/^MultiLog_/, '')
+                      .replace(/_\d{4}-\d{2}-\d{2}_\d+$/, '')
+                      .replace(/_/g, ' ');
+  }
+
+  // Collect all PSI column indices; LE columns sort first
+  const psiCols = [];
+  for (let i = 7; i < headers.length; i++) {
+    if (headers[i].endsWith('_LE_GaugePressure_PSI') ||
+        headers[i].endsWith('_Strut_GaugePressure_PSI') ||
+        headers[i].endsWith('_GaugePressure_PSI') ||
+        headers[i].endsWith('_GaugePSI')) {
+      psiCols.push(i);
+    }
+  }
+  if (!psiCols.length) throw new Error('No pressure sensor column found in CSV');
+
+  // Ensure LE column (if any) is first so it becomes the primary sensor
+  const leIdx = psiCols.findIndex(i => headers[i].endsWith('_LE_GaugePressure_PSI'));
+  if (leIdx > 0) { const tmp = psiCols[0]; psiCols[0] = psiCols[leIdx]; psiCols[leIdx] = tmp; }
+
+  const firstPsiCol  = psiCols[0];
+  const secondPsiCol = psiCols[1] ?? -1;
+
+  // Build FIT-compatible records: timestamp in FIT epoch seconds, lat/lon as decimals
+  const records = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const cols  = line.split(',');
+    const tsStr = cols[1]?.trim();
+    if (!tsStr) continue;
+    const ts   = Math.round(new Date(tsStr).getTime() / 1000) - FIT_EPOCH;
+    const latS = cols[2]?.trim(), lonS = cols[3]?.trim();
+    const lat  = latS ? parseFloat(latS) : null;
+    const lon  = lonS ? parseFloat(lonS) : null;
+    const psiS  = cols[firstPsiCol]?.trim();
+    const psi   = psiS ? parseFloat(psiS) : 0;
+    const psi2S = secondPsiCol >= 0 ? cols[secondPsiCol]?.trim() : null;
+    const psi2  = psi2S ? parseFloat(psi2S) : 0;
+    const rec = {
+      timestamp:   ts,
+      lat:         (lat !== null && !isNaN(lat)) ? lat : null,
+      lon:         (lon !== null && !isNaN(lon)) ? lon : null,
+      pressure_le: isNaN(psi) ? 0 : psi,
+    };
+    if (secondPsiCol >= 0) rec.pressure_st = isNaN(psi2) ? 0 : psi2;
+    records.push(rec);
+  }
+  if (!records.length) throw new Error('No data rows found in CSV');
+  return { records, sessionName };
+}
+
 // ── Main file handler ────────────────────────────────────────────────────────
 async function handleFile(file) {
   _showProcessing(true);
   _setError('');
   document.getElementById('metaFile').textContent = file.name;
   try {
-    const ab             = await extractFit(file);
-    const { records }    = parseFit(ab);
-    if (!records.length) throw new Error('File contained no data records');
-    const DATA           = processRecords(records);
-    renderVisualization(DATA);
+    if (file.name.toLowerCase().endsWith('.csv')) {
+      const text               = await file.text();
+      const { records, sessionName } = parseCSVFile(text, file.name);
+      if (!records.length) throw new Error('File contained no data records');
+      const DATA               = processRecords(records);
+      DATA.t_date_str          = sessionName;
+      renderVisualization(DATA);
+    } else {
+      const ab             = await extractFit(file);
+      const { records }    = parseFit(ab);
+      if (!records.length) throw new Error('File contained no data records');
+      const DATA           = processRecords(records);
+      renderVisualization(DATA);
+    }
   } catch (err) {
     console.error('[PressureWerx]', err);
-    _setError(err.message || 'Failed to parse file — is this a Garmin FIT export?');
+    _setError(err.message || 'Failed to parse file — is this a valid FIT or PressureWerx CSV?');
   } finally {
     _showProcessing(false);
   }
@@ -999,6 +1104,11 @@ function renderVisualization(DATA) {
   if (DATA.noPressure) {
     document.getElementById('metaMean').textContent = '—';
     document.getElementById('dataRangeInfo').textContent = '';
+  } else if (DATA.hasTwoSensors) {
+    document.getElementById('metaMean').textContent =
+      `LE ${DATA.mean_pressure.toFixed(2)} · ST ${DATA.mean_pressure_st.toFixed(2)} PSI`;
+    document.getElementById('dataRangeInfo').textContent =
+      `LE range: ${DATA.data_min.toFixed(3)} – ${DATA.data_max.toFixed(3)} PSI`;
   } else {
     document.getElementById('metaMean').textContent = `${DATA.mean_pressure.toFixed(2)} PSI`;
     document.getElementById('dataRangeInfo').textContent =
@@ -1133,7 +1243,10 @@ function renderVisualization(DATA) {
       tgSvg.setAttribute('viewBox', `0 0 ${tgEffW} ${TG_H}`);
       const fs = tgEffW < 500 ? 11 : 9;
       const pW=tgEffW-TG_PL-TG_PR, pH=TG_H-TG_PT-TG_PB;
-      const yMin=Math.floor(DATA.data_min*2)/2, yMax=Math.ceil(DATA.data_max*2)/2;
+      const showStrut = DATA.hasTwoSensors && strutChk.checked;
+      const combinedMin = showStrut ? Math.min(DATA.data_min, DATA.data_min_st) : DATA.data_min;
+      const combinedMax = showStrut ? Math.max(DATA.data_max, DATA.data_max_st) : DATA.data_max;
+      const yMin=Math.floor(combinedMin*2)/2, yMax=Math.ceil(combinedMax*2)/2;
       const yS=p=>TG_PT+(1-(p-yMin)/(yMax-yMin))*pH;
       const xS=i=>TG_PL+(i/N_SEG)*pW;
 
@@ -1181,6 +1294,18 @@ function renderVisualization(DATA) {
         });
         tgSvg.appendChild(seg);
       }
+      if (showStrut) {
+        const pressuresST=DATA.segments.map(s=>s[5]??0);
+        for(let i=0;i<N_SEG;i++){
+          const p=pressuresST[i], inW=(i>=winStart&&i<winEnd);
+          const seg=el('line',{
+            x1:xS(i),y1:yS(p),x2:xS(i+1),y2:(i+1<N_SEG?yS(pressuresST[i+1]):yS(p)),
+            stroke:inW?'#FF8000':'#664400',
+            'stroke-width':inW?'2.0':'1.2','stroke-opacity':inW?'0.85':'0.45'
+          });
+          tgSvg.appendChild(seg);
+        }
+      }
       if(winStart>0){const v=el('line',{x1:xS(winStart),x2:xS(winStart),y1:TG_PT,y2:TG_H-TG_PB,stroke:'#888888','stroke-width':'1.2','stroke-dasharray':'4,2'});tgSvg.appendChild(v);}
       if(winEnd<N_SEG){const v=el('line',{x1:xS(winEnd),x2:xS(winEnd),y1:TG_PT,y2:TG_H-TG_PB,stroke:'#888888','stroke-width':'1.2','stroke-dasharray':'4,2'});tgSvg.appendChild(v);}
       const tip=el('g',{visibility:'hidden'});
@@ -1195,7 +1320,11 @@ function renderVisualization(DATA) {
         const psi=pressures[idx];
         const tot=sBase+(idx/N_SEG)*DATA.duration_s;
         const H3=Math.floor(tot/3600)%24, M3=Math.floor((tot%3600)/60), S3=Math.floor(tot%60);
-        tipTxt.textContent=`${psi.toFixed(2)} PSI  ${String(H3).padStart(2,'0')}:${String(M3).padStart(2,'0')}:${String(S3).padStart(2,'0')}`;
+        const timeStr=`${String(H3).padStart(2,'0')}:${String(M3).padStart(2,'0')}:${String(S3).padStart(2,'0')}`;
+        const psiStr = showStrut
+          ? `LE ${psi.toFixed(2)}  ST ${(DATA.segments[idx][5]??0).toFixed(2)} PSI`
+          : `${psi.toFixed(2)} PSI`;
+        tipTxt.textContent=`${psiStr}  ${timeStr}`;
         const tw=tipTxt.getComputedTextLength()+12, th=16;
         const tx=Math.max(TG_PL+tw/2,Math.min(tgEffW-TG_PR-tw/2,svgX));
         tipBg.setAttribute('x',tx-tw/2); tipBg.setAttribute('y',TG_PT+2);
@@ -1235,6 +1364,12 @@ function renderVisualization(DATA) {
     const interpChk = document.getElementById('showInterpChk');
     interpChk.checked = true;
     interpChk.addEventListener('change', drawTimeGraph);
+
+    const strutLbl = document.getElementById('strutToggleLabel');
+    const strutChk = document.getElementById('showStrutChk');
+    strutLbl.style.display = DATA.hasTwoSensors ? '' : 'none';
+    strutChk.checked = true;
+    strutChk.addEventListener('change', drawTimeGraph);
 
     function applyColors() {
       if (DATA.noPressure) {
@@ -1362,8 +1497,8 @@ dz.addEventListener('drop', e => {
   const f = e.dataTransfer.files[0];
   if (!f) return;
   const n = f.name.toLowerCase();
-  if (!n.endsWith('.fit') && !n.endsWith('.zip')) {
-    _setError('Please drop a .fit or .zip file');
+  if (!n.endsWith('.fit') && !n.endsWith('.zip') && !n.endsWith('.csv')) {
+    _setError('Please drop a .fit, .zip, or .csv file');
     return;
   }
   handleFile(f);

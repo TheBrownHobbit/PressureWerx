@@ -560,6 +560,7 @@ body {
         <span>End: <strong id="timeEndLbl">—</strong></span>
         <label class="interp-toggle-label"><input type="checkbox" id="showInterpChk"> Highlight Interpolated Data</label>
         <label class="interp-toggle-label" id="strutToggleLabel" style="display:none"><input type="checkbox" id="showStrutChk" checked> Show Strut</label>
+        <label class="interp-toggle-label" id="smoothToggleLabel"><input type="checkbox" id="showSmoothChk" checked> Smooth</label>
       </div>
     </div>
 
@@ -810,13 +811,20 @@ function _haversine(la1, lo1, la2, lo2) {
   return 2*R*Math.asin(Math.sqrt(a));
 }
 
-function _buildSegs(records, smoothed, tStart, interp, smoothedST) {
+function _buildSegs(records, smoothed, tStart, interp, smoothedST, rawFilled, rawFilledST) {
   const DECIM = 2;
   // GPS-valid filter first, then decimate — matches Python pipeline behaviour
   const gps = records
-    .map((r, i) => ({ r, p: smoothed[i], pST: smoothedST ? smoothedST[i] : null, interp: interp ? interp[i] : 0 }))
+    .map((r, i) => ({
+      r,
+      p:     smoothed[i],
+      pST:   smoothedST   ? smoothedST[i]   : null,
+      pRaw:  rawFilled    ? rawFilled[i]    : null,
+      pSTRaw: rawFilledST ? rawFilledST[i]  : null,
+      interp: interp ? interp[i] : 0,
+    }))
     .filter(x => x.r.lat != null);
-  const segments = [], segSeconds = [], interpMask = [];
+  const segments = [], segSeconds = [], interpMask = [], rawPressures = [], rawPressuresST = [];
   for (let i = 0; i + DECIM < gps.length; i += DECIM) {
     const a = gps[i], b = gps[i + DECIM];
     segments.push([
@@ -827,8 +835,10 @@ function _buildSegs(records, smoothed, tStart, interp, smoothedST) {
     ]);
     segSeconds.push(a.r.timestamp - tStart);
     interpMask.push(a.interp || b.interp ? 1 : 0);
+    if (rawFilled)   rawPressures.push(+a.pRaw.toFixed(4));
+    if (rawFilledST) rawPressuresST.push(+a.pSTRaw.toFixed(4));
   }
-  return { segments, segSeconds, interpMask };
+  return { segments, segSeconds, interpMask, rawPressures, rawPressuresST };
 }
 
 function processRecords(records) {
@@ -862,6 +872,7 @@ function processRecords(records) {
 
   let segments, segSeconds, interpMask, data_min, data_max, default_min, default_max, mean_pressure, primaryKey;
   let hasTwoSensors = false, data_min_st = null, data_max_st = null, mean_pressure_st = null;
+  let rawPressures = [], rawPressuresST = [];
 
   if (noPressure) {
     const zeroSmoothed = new Float64Array(records.length);
@@ -878,10 +889,10 @@ function processRecords(records) {
     const { out: filled, interp: rawInterp } = _fillZeros(rawPressure);
     const smoothed = _savgol(filled);
 
-    let smoothedST = null;
+    let smoothedST = null, filledST = null;
     if (secondaryKey) {
       const rawST = channels[secondaryKey];
-      const { out: filledST } = _fillZeros(rawST);
+      ({ out: filledST } = _fillZeros(rawST));
       smoothedST = _savgol(filledST);
       const validST     = rawST.map((v, i) => v !== 0 ? i : -1).filter(i => i >= 0);
       const vSmoothedST = validST.map(i => smoothedST[i]);
@@ -892,7 +903,8 @@ function processRecords(records) {
       hasTwoSensors    = true;
     }
 
-    ({ segments, segSeconds, interpMask } = _buildSegs(records, smoothed, tStart, rawInterp, smoothedST));
+    ({ segments, segSeconds, interpMask, rawPressures, rawPressuresST }
+      = _buildSegs(records, smoothed, tStart, rawInterp, smoothedST, filled, filledST));
     const validIdx  = rawPressure.map((v, i) => v !== 0 ? i : -1).filter(i => i >= 0);
     const vSmoothed = validIdx.map(i => smoothed[i]);
     const sortedP   = vSmoothed.slice().sort((a, b) => a - b);
@@ -918,6 +930,7 @@ function processRecords(records) {
     noPressure,
     interpMask,
     hasTwoSensors, data_min_st, data_max_st, mean_pressure_st,
+    rawPressures, rawPressuresST,
   };
 }
 
@@ -1284,7 +1297,7 @@ function renderVisualization(DATA) {
         }
       }
 
-      const pressures=DATA.segments.map(s=>s[4]);
+      const pressures = smoothChk.checked ? DATA.segments.map(s=>s[4]) : DATA.rawPressures;
       for(let i=0;i<N_SEG;i++){
         const p=pressures[i], inW=(i>=winStart&&i<winEnd);
         const seg=el('line',{
@@ -1295,7 +1308,9 @@ function renderVisualization(DATA) {
         tgSvg.appendChild(seg);
       }
       if (showStrut) {
-        const pressuresST=DATA.segments.map(s=>s[5]??0);
+        const pressuresST = smoothChk.checked
+          ? DATA.segments.map(s=>s[5]??0)
+          : (DATA.rawPressuresST.length ? DATA.rawPressuresST : DATA.segments.map(s=>s[5]??0));
         for(let i=0;i<N_SEG;i++){
           const p=pressuresST[i], inW=(i>=winStart&&i<winEnd);
           const seg=el('line',{
@@ -1321,8 +1336,11 @@ function renderVisualization(DATA) {
         const tot=sBase+(idx/N_SEG)*DATA.duration_s;
         const H3=Math.floor(tot/3600)%24, M3=Math.floor((tot%3600)/60), S3=Math.floor(tot%60);
         const timeStr=`${String(H3).padStart(2,'0')}:${String(M3).padStart(2,'0')}:${String(S3).padStart(2,'0')}`;
-        const psiStr = showStrut
-          ? `LE ${psi.toFixed(2)}  ST ${(DATA.segments[idx][5]??0).toFixed(2)} PSI`
+        const psiST = showStrut
+          ? (smoothChk.checked ? (DATA.segments[idx][5]??0) : (DATA.rawPressuresST[idx]??0))
+          : null;
+        const psiStr = psiST != null
+          ? `LE ${psi.toFixed(2)}  ST ${psiST.toFixed(2)} PSI`
           : `${psi.toFixed(2)} PSI`;
         tipTxt.textContent=`${psiStr}  ${timeStr}`;
         const tw=tipTxt.getComputedTextLength()+12, th=16;
@@ -1370,6 +1388,17 @@ function renderVisualization(DATA) {
     strutLbl.style.display = DATA.hasTwoSensors ? '' : 'none';
     strutChk.checked = true;
     strutChk.addEventListener('change', drawTimeGraph);
+
+    const smoothLbl = document.getElementById('smoothToggleLabel');
+    const smoothChk = document.getElementById('showSmoothChk');
+    smoothLbl.style.display = DATA.noPressure ? 'none' : '';
+    smoothChk.checked = true;
+    smoothChk.addEventListener('change', () => {
+      polylines.forEach((pl, i) => {
+        pl._pressure = smoothChk.checked ? DATA.segments[i][4] : DATA.rawPressures[i];
+      });
+      applyColors();
+    });
 
     function applyColors() {
       if (DATA.noPressure) {

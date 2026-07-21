@@ -1242,6 +1242,7 @@ function renderVisualization(DATA) {
     const tgSvg = document.getElementById('timegraph');
     const TG_W=900,TG_H=130,TG_PL=38,TG_PR=8,TG_PT=8,TG_PB=18;
     let tgEffW = TG_W;
+    let winYMin = null, winYMax = null;
     const NS='http://www.w3.org/2000/svg';
     function el(tag,attrs){
       const e=document.createElementNS(NS,tag);
@@ -1260,6 +1261,33 @@ function renderVisualization(DATA) {
       });
     }
 
+    function computeWindowYRange() {
+      const startIdx = winStart, endIdx = Math.min(winEnd, N_SEG-1);
+      const leP = smoothChk.checked ? DATA.segments.map(s=>s[4]) : DATA.rawPressures;
+      const stP = DATA.hasTwoSensors
+        ? (smoothChk.checked
+            ? DATA.segments.map(s=>s[5]??0)
+            : (DATA.rawPressuresST.length ? DATA.rawPressuresST : DATA.segments.map(s=>s[5]??0)))
+        : null;
+      let lo=Infinity, hi=-Infinity;
+      for (let i=startIdx; i<=endIdx; i++) {
+        const pLE=leP[i];
+        if (pLE<lo) lo=pLE;
+        if (pLE>hi) hi=pLE;
+        if (stP) {
+          const pST=stP[i];
+          if (pST<lo) lo=pST;
+          if (pST>hi) hi=pST;
+        }
+      }
+      if (!isFinite(lo) || !isFinite(hi)) { lo=DATA.data_min; hi=DATA.data_max; }
+      const pad = Math.max((hi-lo)*0.03, 0.015);
+      const SNAP = 0.1;   // fine-grained snap so small window changes move the axis
+      let yMinNew=Math.floor((lo-pad)/SNAP)*SNAP, yMaxNew=Math.ceil((hi+pad)/SNAP)*SNAP;
+      if (yMaxNew-yMinNew < 0.3) yMaxNew = yMinNew + 0.3;
+      winYMin = yMinNew; winYMax = yMaxNew;
+    }
+
     function drawTimeGraph() {
       while(tgSvg.firstChild) tgSvg.removeChild(tgSvg.firstChild);
       tgEffW = Math.round(tgSvg.getBoundingClientRect().width) || TG_W;
@@ -1267,18 +1295,20 @@ function renderVisualization(DATA) {
       const fs = tgEffW < 500 ? 11 : 9;
       const pW=tgEffW-TG_PL-TG_PR, pH=TG_H-TG_PT-TG_PB;
       const showStrut = DATA.hasTwoSensors && strutChk.checked;
-      const combinedMin = showStrut ? Math.min(DATA.data_min, DATA.data_min_st) : DATA.data_min;
-      const combinedMax = showStrut ? Math.max(DATA.data_max, DATA.data_max_st) : DATA.data_max;
-      const yMin=Math.floor(combinedMin*2)/2, yMax=Math.ceil(combinedMax*2)/2;
+      if (winYMin === null || winYMax === null) computeWindowYRange();
+      const yMin = winYMin, yMax = winYMax;
       const yS=p=>TG_PT+(1-(p-yMin)/(yMax-yMin))*pH;
       const xS=i=>TG_PL+(i/N_SEG)*pW;
 
       tgSvg.appendChild(el('rect',{x:TG_PL,y:TG_PT,width:pW,height:pH,fill:'none',stroke:'#2a2a2a','stroke-width':'0.5'}));
-      for(let y=yMin;y<=yMax+1e-9;y+=0.5){
+      const GRID_STEPS=[0.05,0.1,0.2,0.5,1,2,5,10];
+      const gridStep = GRID_STEPS.find(s=>(yMax-yMin)/s<=10) ?? GRID_STEPS[GRID_STEPS.length-1];
+      const labelPrec = gridStep < 0.1 ? 2 : 1;
+      for(let y=Math.ceil(yMin/gridStep)*gridStep;y<=yMax+1e-9;y+=gridStep){
         const yy=yS(y);
         tgSvg.appendChild(el('line',{x1:TG_PL,x2:tgEffW-TG_PR,y1:yy,y2:yy,stroke:'#2a2a2a','stroke-width':'0.5'}));
         const t=el('text',{x:TG_PL-4,y:yy+3,'font-size':String(fs),fill:'rgba(255,255,255,.75)','text-anchor':'end'});
-        t.textContent=y.toFixed(1); tgSvg.appendChild(t);
+        t.textContent=y.toFixed(labelPrec); tgSvg.appendChild(t);
       }
       const totMin=DATA.duration_s/60, te=totMin<=30?5:(totMin<=90?15:30);
       const [sh2,sm2,ss3]=DATA.t_start_str.split(':').map(Number), sBase=sh2*3600+sm2*60+ss3;
@@ -1407,6 +1437,7 @@ function renderVisualization(DATA) {
       polylines.forEach((pl, i) => {
         pl._pressure = smoothChk.checked ? DATA.segments[i][4] : DATA.rawPressures[i];
       });
+      computeWindowYRange();
       applyColors();
     });
 
@@ -1457,8 +1488,15 @@ function renderVisualization(DATA) {
     };
     document.addEventListener('mousemove',onDrag);
     document.addEventListener('touchmove',onDrag,{passive:false});
-    document.addEventListener('mouseup',  ()=>{dragging=null;});
-    document.addEventListener('touchend', ()=>{dragging=null;});
+    const endDrag = () => {
+      if (dragging==='tStart' || dragging==='tEnd') {
+        computeWindowYRange();
+        drawTimeGraph();
+      }
+      dragging=null;
+    };
+    document.addEventListener('mouseup',  endDrag);
+    document.addEventListener('touchend', endDrag);
     _vis.cleanup = () => {
       document.removeEventListener('mousemove',onDrag);
       document.removeEventListener('touchmove',onDrag);
@@ -1467,7 +1505,7 @@ function renderVisualization(DATA) {
     // ── 8. Preset buttons & keyboard shortcuts ─────────────────────────────
     document.getElementById('resetDefaults').onclick=()=>{vmin=DATA.default_min;vmax=DATA.default_max;updateThumbs();applyColors();};
     document.getElementById('resetData').onclick=()=>{vmin=DATA.data_min;vmax=DATA.data_max;updateThumbs();applyColors();};
-    document.getElementById('resetTime').onclick=()=>{winStart=0;winEnd=N_SEG;updateTimeThumbs();applyColors();};
+    document.getElementById('resetTime').onclick=()=>{winStart=0;winEnd=N_SEG;updateTimeThumbs();computeWindowYRange();applyColors();};
 
     // ── CSV export ──
     const exportBtn = document.getElementById('exportCsv');
@@ -1506,7 +1544,7 @@ function renderVisualization(DATA) {
       if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
       if(DATA.noPressure) return;
       if(e.key==='r'||e.key==='R'){vmin=DATA.default_min;vmax=DATA.default_max;updateThumbs();applyColors();}
-      else if(e.key==='t'||e.key==='T'){winStart=0;winEnd=N_SEG;updateTimeThumbs();applyColors();}
+      else if(e.key==='t'||e.key==='T'){winStart=0;winEnd=N_SEG;updateTimeThumbs();computeWindowYRange();applyColors();}
       else if(e.key==='f'||e.key==='F'){vmin=DATA.data_min;vmax=DATA.data_max;updateThumbs();applyColors();}
     };
     document.addEventListener('keydown',onKey);
@@ -1519,6 +1557,7 @@ function renderVisualization(DATA) {
     } else {
       updateThumbs();
       updateTimeThumbs();
+      computeWindowYRange();
       applyColors();
     }
 

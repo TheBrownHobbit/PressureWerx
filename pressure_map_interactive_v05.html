@@ -1351,12 +1351,22 @@ function renderVisualization(DATA) {
         const pressuresST = smoothChk.checked
           ? DATA.segments.map(s=>s[5]??0)
           : (DATA.rawPressuresST.length ? DATA.rawPressuresST : DATA.segments.map(s=>s[5]??0));
+
+        // Scale the LE vmin/vmax selection onto the strut's own full range —
+        // no separate strut color control, just the same relative fraction.
+        const leSpan = DATA.data_max - DATA.data_min;
+        const fracMin = leSpan ? (vmin - DATA.data_min) / leSpan : 0;
+        const fracMax = leSpan ? (vmax - DATA.data_min) / leSpan : 1;
+        const stSpan = DATA.data_max_st - DATA.data_min_st;
+        const vminST = DATA.data_min_st + fracMin * stSpan;
+        const vmaxST = DATA.data_min_st + fracMax * stSpan;
+
         for(let i=0;i<N_SEG;i++){
           const p=pressuresST[i], inW=(i>=winStart&&i<winEnd);
           const seg=el('line',{
             x1:xS(i),y1:yS(p),x2:xS(i+1),y2:(i+1<N_SEG?yS(pressuresST[i+1]):yS(p)),
-            stroke:inW?'#FF8000':'#664400',
-            'stroke-width':inW?'2.0':'1.2','stroke-opacity':inW?'0.85':'0.45'
+            stroke:inW?_colorFor(p,vminST,vmaxST):'#dcdcdc',
+            'stroke-width':inW?'2.0':'1.2','stroke-opacity':inW?'0.95':'0.55'
           });
           tgSvg.appendChild(seg);
         }

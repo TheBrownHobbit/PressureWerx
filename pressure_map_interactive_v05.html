@@ -685,7 +685,7 @@ function parseFit(ab) {
       const di = rec.f0, fn = rec.f1, bt = rec.f2, name = rec.f3 || '';
       if (di != null && fn != null && name) {
         if (!devFields[di]) devFields[di] = {};
-        devFields[di][fn] = { name, size: BASE_SIZE[bt] || 4 };
+        devFields[di][fn] = { name, size: BASE_SIZE[bt] || 4, baseType: bt };
       }
     } else if (def.globalNum === 20) {
       if (rec.timestamp != null) lastTs = rec.timestamp;
@@ -717,11 +717,12 @@ function _readMsg(u8, dv, pos, def, devFields) {
   }
 
   for (const df of devFieldDefs || []) {
-    const v = _rdVal(u8, dv, pos + off, 0x88, df.size, be);
+    const dfi = devFields[df.devDataIdx];
+    const m   = dfi ? dfi[df.defNum] : null;
+    const v   = _rdVal(u8, dv, pos + off, m ? m.baseType : 0x88, df.size, be);
     off += df.size;
     if (globalNum === 20) {
-      const dfi = devFields[df.devDataIdx];
-      if (dfi) { const m = dfi[df.defNum]; if (m) rec[m.name] = v; }
+      if (m) rec[m.name] = v;
     }
   }
 
@@ -1526,17 +1527,21 @@ function renderVisualization(DATA) {
 
       const has2 = _vis.hasTwoSensors;
       const primaryKey = _vis.primaryKey;
-      const hdr = ['index', 'timestamp_utc', 'pressure_le_psi'];
+      const hasLEAge = recs.some(r => r.age_le != null);
+      const hasSTAge = recs.some(r => r.age_st != null);
+      const hdr = ['index', 'timestamp_utc', 'lat', 'lon', 'pressure_le_psi'];
       if (has2) hdr.push('pressure_st_psi');
-      hdr.push('lat', 'lon');
+      if (hasLEAge) hdr.push('le_age');
+      if (hasSTAge) hdr.push('st_age');
 
       const rows = [hdr.join(',')];
       for (let i = 0; i < recs.length; i++) {
         const r = recs[i];
         const ts = new Date((r.timestamp + FIT_EPOCH) * 1000).toISOString();
-        const cols = [i + 1, ts, primaryKey ? (r[primaryKey] ?? '') : ''];
+        const cols = [i + 1, ts, r.lat ?? '', r.lon ?? '', primaryKey ? (r[primaryKey] ?? '') : ''];
         if (has2) cols.push(r.pressure_st ?? '');
-        cols.push(r.lat ?? '', r.lon ?? '');
+        if (hasLEAge) cols.push(r.age_le ?? '');
+        if (hasSTAge) cols.push(r.age_st ?? '');
         rows.push(cols.join(','));
       }
 

@@ -968,6 +968,44 @@ function parseCSVFile(text, filename) {
   if (isLegacyWingLog || isLegacyMultiLog)
     throw new Error('Legacy CSV format detected — please export a fresh session from the PressureWerx app');
 
+  // Our own "Export CSV" output — detect by header name (column order has
+  // changed across versions; name-based lookup is robust to all of them).
+  const isOwnExport = headers.includes('timestamp_utc') && headers.includes('pressure_le_psi');
+  if (isOwnExport) {
+    const idx = {};
+    headers.forEach((h, i) => idx[h] = i);
+    const records = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const cols  = line.split(',');
+      const tsStr = cols[idx['timestamp_utc']]?.trim();
+      if (!tsStr) continue;
+      const ts   = Math.round(new Date(tsStr).getTime() / 1000) - FIT_EPOCH;
+      const latS = cols[idx['lat']]?.trim(), lonS = cols[idx['lon']]?.trim();
+      const lat  = latS ? parseFloat(latS) : null;
+      const lon  = lonS ? parseFloat(lonS) : null;
+      const psiS = cols[idx['pressure_le_psi']]?.trim();
+      const psi  = psiS ? parseFloat(psiS) : 0;
+      const rec = {
+        timestamp:   ts,
+        lat:         (lat !== null && !isNaN(lat)) ? lat : null,
+        lon:         (lon !== null && !isNaN(lon)) ? lon : null,
+        pressure_le: isNaN(psi) ? 0 : psi,
+      };
+      if ('pressure_st_psi' in idx) {
+        const psi2S = cols[idx['pressure_st_psi']]?.trim();
+        const psi2  = psi2S ? parseFloat(psi2S) : 0;
+        rec.pressure_st = isNaN(psi2) ? 0 : psi2;
+      }
+      if ('le_age' in idx) { const v = cols[idx['le_age']]?.trim(); if (v) rec.age_le = parseFloat(v); }
+      if ('st_age' in idx) { const v = cols[idx['st_age']]?.trim(); if (v) rec.age_st = parseFloat(v); }
+      records.push(rec);
+    }
+    if (!records.length) throw new Error('No data rows found in CSV');
+    return { records, sessionName: null };
+  }
+
   // Derive session name from filename prefix
   const base = filename.replace(/\.csv$/i, '');
   let sessionName = base;
@@ -1046,7 +1084,7 @@ async function handleFile(file) {
       const { records, sessionName } = parseCSVFile(text, file.name);
       if (!records.length) throw new Error('File contained no data records');
       const DATA               = processRecords(records);
-      DATA.t_date_str          = sessionName;
+      if (sessionName) DATA.t_date_str = sessionName;
       DATA._rawRecords         = records;
       renderVisualization(DATA);
     } else {

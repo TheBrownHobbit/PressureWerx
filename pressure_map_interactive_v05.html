@@ -823,7 +823,7 @@ function _haversine(la1, lo1, la2, lo2) {
   return 2*R*Math.asin(Math.sqrt(a));
 }
 
-function _buildSegs(records, smoothed, tStart, interp, smoothedST, rawFilled, rawFilledST) {
+function _buildSegs(records, smoothed, tStart, interp, smoothedST, rawFilled, rawFilledST, interpST) {
   const DECIM = 2;
   // GPS-valid filter first, then decimate — matches Python pipeline behaviour
   const gps = records
@@ -834,6 +834,7 @@ function _buildSegs(records, smoothed, tStart, interp, smoothedST, rawFilled, ra
       pRaw:  rawFilled    ? rawFilled[i]    : null,
       pSTRaw: rawFilledST ? rawFilledST[i]  : null,
       interp: interp ? interp[i] : 0,
+      interpST: interpST ? interpST[i] : 0,
     }))
     .filter(x => x.r.lat != null);
   const segments = [], segSeconds = [], interpMask = [], rawPressures = [], rawPressuresST = [];
@@ -846,7 +847,7 @@ function _buildSegs(records, smoothed, tStart, interp, smoothedST, rawFilled, ra
       smoothedST ? +a.pST.toFixed(4) : null,
     ]);
     segSeconds.push(a.r.timestamp - tStart);
-    interpMask.push(a.interp || b.interp ? 1 : 0);
+    interpMask.push((a.interp || b.interp || a.interpST || b.interpST) ? 1 : 0);
     if (rawFilled)   rawPressures.push(+a.pRaw.toFixed(4));
     if (rawFilledST) rawPressuresST.push(+a.pSTRaw.toFixed(4));
   }
@@ -901,10 +902,10 @@ function processRecords(records) {
     const { out: filled, interp: rawInterp } = _fillZeros(rawPressure);
     const smoothed = _savgol(filled);
 
-    let smoothedST = null, filledST = null;
+    let smoothedST = null, filledST = null, rawInterpST = null;
     if (secondaryKey) {
       const rawST = channels[secondaryKey];
-      ({ out: filledST } = _fillZeros(rawST));
+      ({ out: filledST, interp: rawInterpST } = _fillZeros(rawST));
       smoothedST = _savgol(filledST);
       const validST     = rawST.map((v, i) => v !== 0 ? i : -1).filter(i => i >= 0);
       const vSmoothedST = validST.map(i => smoothedST[i]);
@@ -916,7 +917,7 @@ function processRecords(records) {
     }
 
     ({ segments, segSeconds, interpMask, rawPressures, rawPressuresST }
-      = _buildSegs(records, smoothed, tStart, rawInterp, smoothedST, filled, filledST));
+      = _buildSegs(records, smoothed, tStart, rawInterp, smoothedST, filled, filledST, rawInterpST));
     const validIdx  = rawPressure.map((v, i) => v !== 0 ? i : -1).filter(i => i >= 0);
     const vSmoothed = validIdx.map(i => smoothed[i]);
     const sortedP   = vSmoothed.slice().sort((a, b) => a - b);
@@ -1381,22 +1382,6 @@ function renderVisualization(DATA) {
       }
       const yl=el('text',{x:4,y:TG_PT+6,'font-size':String(fs),fill:'rgba(255,255,255,.75)'}); yl.textContent='PSI'; tgSvg.appendChild(yl);
 
-      if (document.getElementById('showInterpChk').checked && DATA.interpMask) {
-        let runStart = -1;
-        for (let i = 0; i <= N_SEG; i++) {
-          const isInterp = i < N_SEG && DATA.interpMask[i];
-          if (isInterp && runStart < 0) { runStart = i; }
-          else if (!isInterp && runStart >= 0) {
-            tgSvg.appendChild(el('rect', {
-              x: String(xS(runStart)), y: String(TG_PT),
-              width: String(Math.max(1, xS(i) - xS(runStart))),
-              height: String(pH), fill: 'rgba(255,255,255,0.18)',
-            }));
-            runStart = -1;
-          }
-        }
-      }
-
       const pressures = smoothChk.checked ? DATA.segments.map(s=>s[4]) : DATA.rawPressures;
       for(let i=0;i<N_SEG;i++){
         const p=pressures[i], inW=(i>=winStart&&i<winEnd);
@@ -1431,6 +1416,23 @@ function renderVisualization(DATA) {
           tgSvg.appendChild(seg);
         }
       }
+
+      if (document.getElementById('showInterpChk').checked && DATA.interpMask) {
+        let runStart = -1;
+        for (let i = 0; i <= N_SEG; i++) {
+          const isInterp = i < N_SEG && DATA.interpMask[i];
+          if (isInterp && runStart < 0) { runStart = i; }
+          else if (!isInterp && runStart >= 0) {
+            tgSvg.appendChild(el('rect', {
+              x: String(xS(runStart)), y: String(TG_PT),
+              width: String(Math.max(1, xS(i) - xS(runStart))),
+              height: String(pH), fill: 'rgba(255,255,255,0.18)',
+            }));
+            runStart = -1;
+          }
+        }
+      }
+
       if(winStart>0){const v=el('line',{x1:xS(winStart),x2:xS(winStart),y1:TG_PT,y2:TG_H-TG_PB,stroke:'#888888','stroke-width':'1.2','stroke-dasharray':'4,2'});tgSvg.appendChild(v);}
       if(winEnd<N_SEG){const v=el('line',{x1:xS(winEnd),x2:xS(winEnd),y1:TG_PT,y2:TG_H-TG_PB,stroke:'#888888','stroke-width':'1.2','stroke-dasharray':'4,2'});tgSvg.appendChild(v);}
       const tip=el('g',{visibility:'hidden'});

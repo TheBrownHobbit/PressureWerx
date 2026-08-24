@@ -1,0 +1,10 @@
+
+#KEYS - NEVER Commit these
+.env
+.env.local
+
+#Refrence files - Avoid bulk, not needed
+*.csv
+
+#Big things that are not needed in the repo
+**/.DS_Store

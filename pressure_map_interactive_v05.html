@@ -580,10 +580,10 @@ body {
         <label class="interp-toggle-label"><input type="checkbox" id="showInterpChk"> Highlight Interpolated Data</label>
         <span class="interp-key" id="interpKeyLbl" style="display:none">
           <span><i class="interp-swatch interp-swatch-le"></i>LE</span>
-          <span><i class="interp-swatch interp-swatch-st"></i>Strut</span>
+          <span><i class="interp-swatch interp-swatch-st"></i><span id="interpLegendSecondaryText">Strut</span></span>
           <span><i class="interp-swatch interp-swatch-both"></i>Both</span>
         </span>
-        <label class="interp-toggle-label" id="strutToggleLabel" style="display:none"><input type="checkbox" id="showStrutChk" checked> Show Strut</label>
+        <label class="interp-toggle-label" id="strutToggleLabel" style="display:none"><input type="checkbox" id="showStrutChk" checked> Show <span id="secondaryToggleText">Strut</span></label>
         <label class="interp-toggle-label" id="smoothToggleLabel"><input type="checkbox" id="showSmoothChk" checked> Smooth</label>
       </div>
     </div>
@@ -791,7 +791,7 @@ const SG_COEFFS = (() => {
 
 function _detectChannels(records) {
   const ch = {};
-  for (const key of ['pressure_le', 'pressure_st', 'pressure_psi']) {
+  for (const key of ['pressure_le', 'pressure_st', 'pressure_ds', 'pressure_psi']) {
     const v = records.map(r => r[key] ?? 0);
     if (v.some(x => x !== 0)) ch[key] = v;
   }
@@ -913,6 +913,7 @@ function processRecords(records) {
   let segments, segSeconds, interpMask, data_min, data_max, default_min, default_max, mean_pressure, primaryKey;
   let hasTwoSensors = false, data_min_st = null, data_max_st = null, mean_pressure_st = null;
   let rawPressures = [], rawPressuresST = [];
+  let secondaryType = null;
 
   if (noPressure) {
     const zeroSmoothed = new Float64Array(records.length);
@@ -923,7 +924,11 @@ function processRecords(records) {
     primaryKey = 'pressure_le' in channels ? 'pressure_le'
                : 'pressure_st' in channels ? 'pressure_st'
                : 'pressure_psi';
-    const secondaryKey = (primaryKey === 'pressure_le' && 'pressure_st' in channels) ? 'pressure_st' : null;
+    // DS always replaces Strut when both are somehow present in a file.
+    const secondaryKey = (primaryKey === 'pressure_le' && 'pressure_ds' in channels) ? 'pressure_ds'
+                        : (primaryKey === 'pressure_le' && 'pressure_st' in channels) ? 'pressure_st'
+                        : null;
+    secondaryType = secondaryKey === 'pressure_ds' ? 'ds' : secondaryKey === 'pressure_st' ? 'strut' : null;
 
     const rawPressure = channels[primaryKey];
     const { out: filled, interp: rawInterp } = _fillZeros(rawPressure);
@@ -967,6 +972,7 @@ function processRecords(records) {
     start:  [withGps[0].lat, withGps[0].lon],
     end:    [withGps[withGps.length-1].lat, withGps[withGps.length-1].lon],
     primaryKey,
+    secondaryType,
     noPressure,
     interpMask,
     hasTwoSensors, data_min_st, data_max_st, mean_pressure_st,
@@ -1021,7 +1027,11 @@ function parseCSVFile(text, filename) {
         lon:         (lon !== null && !isNaN(lon)) ? lon : null,
         pressure_le: isNaN(psi) ? 0 : psi,
       };
-      if ('pressure_st_psi' in idx) {
+      if ('pressure_ds_psi' in idx) {
+        const psi2S = cols[idx['pressure_ds_psi']]?.trim();
+        const psi2  = psi2S ? parseFloat(psi2S) : 0;
+        rec.pressure_ds = isNaN(psi2) ? 0 : psi2;
+      } else if ('pressure_st_psi' in idx) {
         const psi2S = cols[idx['pressure_st_psi']]?.trim();
         const psi2  = psi2S ? parseFloat(psi2S) : 0;
         rec.pressure_st = isNaN(psi2) ? 0 : psi2;
@@ -1187,6 +1197,7 @@ function renderVisualization(DATA) {
   _vis.rawRecords    = DATA._rawRecords;
   _vis.hasTwoSensors = DATA.hasTwoSensors;
   _vis.primaryKey    = DATA.primaryKey;
+  _vis.secondaryType = DATA.secondaryType;
   _vis.fileName      = document.getElementById('metaFile').textContent;
   document.getElementById('pressureControlsPanel').style.display = '';
   document.getElementById('timeWindowPanel').style.display = '';
@@ -1223,8 +1234,10 @@ function renderVisualization(DATA) {
     document.getElementById('metaMean').textContent = '—';
     document.getElementById('dataRangeInfo').textContent = '';
   } else if (DATA.hasTwoSensors) {
+    const secLabel = DATA.secondaryType === 'ds' ? 'DS' : 'ST';
+    const secPrec  = DATA.secondaryType === 'ds' ? 3 : 2;
     document.getElementById('metaMean').textContent =
-      `LE ${DATA.mean_pressure.toFixed(2)} · ST ${DATA.mean_pressure_st.toFixed(2)} PSI`;
+      `LE ${DATA.mean_pressure.toFixed(2)} · ${secLabel} ${DATA.mean_pressure_st.toFixed(secPrec)} PSI`;
     document.getElementById('dataRangeInfo').textContent =
       `LE range: ${DATA.data_min.toFixed(3)} – ${DATA.data_max.toFixed(3)} PSI`;
   } else {
@@ -1335,9 +1348,9 @@ function renderVisualization(DATA) {
 
     // ── 6. applyColors / drawTimeGraph ────────────────────────────────────
     const tgSvg = document.getElementById('timegraph');
-    const TG_W=900,TG_H=130,TG_PL=38,TG_PR=8,TG_PT=8,TG_PB=18;
+    const TG_W=900,TG_H=130,TG_PL=38,TG_PR=DATA.secondaryType==='ds'?34:8,TG_PT=8,TG_PB=18;
     let tgEffW = TG_W;
-    let winYMin = null, winYMax = null;
+    let winYMin = null, winYMax = null, winYMinDS = null, winYMaxDS = null;
     const NS='http://www.w3.org/2000/svg';
     function el(tag,attrs){
       const e=document.createElementNS(NS,tag);
@@ -1356,10 +1369,21 @@ function renderVisualization(DATA) {
       });
     }
 
+    function _snapRange(lo, hi, fallbackLo, fallbackHi, snap, minSpan) {
+      if (!isFinite(lo) || !isFinite(hi)) { lo = fallbackLo; hi = fallbackHi; }
+      const pad = Math.max((hi-lo)*0.03, snap*0.15);
+      let yMinNew=Math.floor((lo-pad)/snap)*snap, yMaxNew=Math.ceil((hi+pad)/snap)*snap;
+      if (yMaxNew-yMinNew < minSpan) yMaxNew = yMinNew + minSpan;
+      return [yMinNew, yMaxNew];
+    }
+
     function computeWindowYRange() {
       const startIdx = winStart, endIdx = Math.min(winEnd, N_SEG-1);
+      const isDS = DATA.secondaryType === 'ds';
       const leP = smoothChk.checked ? DATA.segments.map(s=>s[4]) : DATA.rawPressures;
-      const stP = DATA.hasTwoSensors
+      // DS gets its own independent right-hand axis, so it's excluded from the
+      // combined LE range below; Strut still shares the LE axis as before.
+      const stP = (DATA.hasTwoSensors && !isDS)
         ? (smoothChk.checked
             ? DATA.segments.map(s=>s[5]??0)
             : (DATA.rawPressuresST.length ? DATA.rawPressuresST : DATA.segments.map(s=>s[5]??0)))
@@ -1375,12 +1399,22 @@ function renderVisualization(DATA) {
           if (pST>hi) hi=pST;
         }
       }
-      if (!isFinite(lo) || !isFinite(hi)) { lo=DATA.data_min; hi=DATA.data_max; }
-      const pad = Math.max((hi-lo)*0.03, 0.015);
-      const SNAP = 0.1;   // fine-grained snap so small window changes move the axis
-      let yMinNew=Math.floor((lo-pad)/SNAP)*SNAP, yMaxNew=Math.ceil((hi+pad)/SNAP)*SNAP;
-      if (yMaxNew-yMinNew < 0.3) yMaxNew = yMinNew + 0.3;
-      winYMin = yMinNew; winYMax = yMaxNew;
+      [winYMin, winYMax] = _snapRange(lo, hi, DATA.data_min, DATA.data_max, 0.1, 0.3);
+
+      if (isDS) {
+        const dsP = smoothChk.checked
+          ? DATA.segments.map(s=>s[5]??0)
+          : (DATA.rawPressuresST.length ? DATA.rawPressuresST : DATA.segments.map(s=>s[5]??0));
+        let dsLo=Infinity, dsHi=-Infinity;
+        for (let i=startIdx; i<=endIdx; i++) {
+          const pDS=dsP[i];
+          if (pDS<dsLo) dsLo=pDS;
+          if (pDS>dsHi) dsHi=pDS;
+        }
+        [winYMinDS, winYMaxDS] = _snapRange(dsLo, dsHi, DATA.data_min_st, DATA.data_max_st, 0.01, 0.03);
+      } else {
+        winYMinDS = null; winYMaxDS = null;
+      }
     }
 
     function drawTimeGraph() {
@@ -1389,21 +1423,34 @@ function renderVisualization(DATA) {
       tgSvg.setAttribute('viewBox', `0 0 ${tgEffW} ${TG_H}`);
       const fs = tgEffW < 500 ? 11 : 9;
       const pW=tgEffW-TG_PL-TG_PR, pH=TG_H-TG_PT-TG_PB;
-      const showStrut = DATA.hasTwoSensors && strutChk.checked;
+      const secondaryType = DATA.secondaryType;
+      const showSecondary = DATA.hasTwoSensors && strutChk.checked;
       if (winYMin === null || winYMax === null) computeWindowYRange();
       const yMin = winYMin, yMax = winYMax;
       const yS=p=>TG_PT+(1-(p-yMin)/(yMax-yMin))*pH;
+      const yS2 = (winYMinDS !== null) ? (p=>TG_PT+(1-(p-winYMinDS)/(winYMaxDS-winYMinDS))*pH) : null;
       const xS=i=>TG_PL+(i/N_SEG)*pW;
 
       tgSvg.appendChild(el('rect',{x:TG_PL,y:TG_PT,width:pW,height:pH,fill:'none',stroke:'#2a2a2a','stroke-width':'0.5'}));
-      const GRID_STEPS=[0.05,0.1,0.2,0.5,1,2,5,10];
+      const GRID_STEPS=[0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10];
       const gridStep = GRID_STEPS.find(s=>(yMax-yMin)/s<=10) ?? GRID_STEPS[GRID_STEPS.length-1];
-      const labelPrec = gridStep < 0.1 ? 2 : 1;
+      const labelPrec = gridStep < 0.02 ? 3 : gridStep < 0.1 ? 2 : 1;
       for(let y=Math.ceil(yMin/gridStep)*gridStep;y<=yMax+1e-9;y+=gridStep){
         const yy=yS(y);
         tgSvg.appendChild(el('line',{x1:TG_PL,x2:tgEffW-TG_PR,y1:yy,y2:yy,stroke:'#2a2a2a','stroke-width':'0.5'}));
         const t=el('text',{x:TG_PL-4,y:yy+3,'font-size':String(fs),fill:'rgba(255,255,255,.75)','text-anchor':'end'});
         t.textContent=y.toFixed(labelPrec); tgSvg.appendChild(t);
+      }
+      if (secondaryType === 'ds' && showSecondary && winYMinDS !== null) {
+        const gridStepDS = GRID_STEPS.find(s=>(winYMaxDS-winYMinDS)/s<=10) ?? GRID_STEPS[GRID_STEPS.length-1];
+        const labelPrecDS = gridStepDS < 0.02 ? 3 : gridStepDS < 0.1 ? 2 : 1;
+        for(let y=Math.ceil(winYMinDS/gridStepDS)*gridStepDS;y<=winYMaxDS+1e-9;y+=gridStepDS){
+          const yy=yS2(y);
+          const t=el('text',{x:tgEffW-TG_PR+4,y:yy+3,'font-size':String(fs),fill:'rgba(255,255,255,.75)','text-anchor':'start'});
+          t.textContent=y.toFixed(labelPrecDS); tgSvg.appendChild(t);
+        }
+        const yl2=el('text',{x:tgEffW-4,y:TG_PT+6,'font-size':String(fs),fill:'rgba(255,255,255,.75)','text-anchor':'end'});
+        yl2.textContent='PSI (DS)'; tgSvg.appendChild(yl2);
       }
       const totMin=DATA.duration_s/60, te=totMin<=30?5:(totMin<=90?15:30);
       const [sh2,sm2,ss3]=DATA.t_start_str.split(':').map(Number), sBase=sh2*3600+sm2*60+ss3;
@@ -1426,25 +1473,27 @@ function renderVisualization(DATA) {
         });
         tgSvg.appendChild(seg);
       }
-      if (showStrut) {
-        const pressuresST = smoothChk.checked
+      if (showSecondary) {
+        const pressuresSec = smoothChk.checked
           ? DATA.segments.map(s=>s[5]??0)
           : (DATA.rawPressuresST.length ? DATA.rawPressuresST : DATA.segments.map(s=>s[5]??0));
 
-        // Scale the LE vmin/vmax selection onto the strut's own full range —
-        // no separate strut color control, just the same relative fraction.
+        // Scale the LE vmin/vmax selection onto the secondary sensor's own full
+        // range — no separate color control for it, just the same relative fraction.
         const leSpan = DATA.data_max - DATA.data_min;
         const fracMin = leSpan ? (vmin - DATA.data_min) / leSpan : 0;
         const fracMax = leSpan ? (vmax - DATA.data_min) / leSpan : 1;
-        const stSpan = DATA.data_max_st - DATA.data_min_st;
-        const vminST = DATA.data_min_st + fracMin * stSpan;
-        const vmaxST = DATA.data_min_st + fracMax * stSpan;
+        const secSpan = DATA.data_max_st - DATA.data_min_st;
+        const vminSec = DATA.data_min_st + fracMin * secSpan;
+        const vmaxSec = DATA.data_min_st + fracMax * secSpan;
+        // DS gets its own independent Y-scale (right axis); Strut shares the LE axis.
+        const ySec = secondaryType === 'ds' ? yS2 : yS;
 
         for(let i=0;i<N_SEG;i++){
-          const p=pressuresST[i], inW=(i>=winStart&&i<winEnd);
+          const p=pressuresSec[i], inW=(i>=winStart&&i<winEnd);
           const seg=el('line',{
-            x1:xS(i),y1:yS(p),x2:xS(i+1),y2:(i+1<N_SEG?yS(pressuresST[i+1]):yS(p)),
-            stroke:inW?_colorFor(p,vminST,vmaxST):'#dcdcdc',
+            x1:xS(i),y1:ySec(p),x2:xS(i+1),y2:(i+1<N_SEG?ySec(pressuresSec[i+1]):ySec(p)),
+            stroke:inW?_colorFor(p,vminSec,vmaxSec):'#dcdcdc',
             'stroke-width':inW?'2.0':'1.2','stroke-opacity':inW?'0.95':'0.55'
           });
           tgSvg.appendChild(seg);
@@ -1483,11 +1532,13 @@ function renderVisualization(DATA) {
         const tot=sBase+(idx/N_SEG)*DATA.duration_s;
         const H3=Math.floor(tot/3600)%24, M3=Math.floor((tot%3600)/60), S3=Math.floor(tot%60);
         const timeStr=`${String(H3).padStart(2,'0')}:${String(M3).padStart(2,'0')}:${String(S3).padStart(2,'0')}`;
-        const psiST = showStrut
+        const psiST = showSecondary
           ? (smoothChk.checked ? (DATA.segments[idx][5]??0) : (DATA.rawPressuresST[idx]??0))
           : null;
+        const secLabel = secondaryType === 'ds' ? 'DS' : 'ST';
+        const secPrec  = secondaryType === 'ds' ? 3 : 2;
         const psiStr = psiST != null
-          ? `LE ${psi.toFixed(2)}  ST ${psiST.toFixed(2)} PSI`
+          ? `LE ${psi.toFixed(2)}  ${secLabel} ${psiST.toFixed(secPrec)} PSI`
           : `${psi.toFixed(2)} PSI`;
         tipTxt.textContent=`${psiStr}  ${timeStr}`;
         const tw=tipTxt.getComputedTextLength()+12, th=16;
@@ -1537,6 +1588,9 @@ function renderVisualization(DATA) {
 
     const strutLbl = document.getElementById('strutToggleLabel');
     const strutChk = document.getElementById('showStrutChk');
+    const secondaryLabel = DATA.secondaryType === 'ds' ? 'DS' : 'Strut';
+    document.getElementById('secondaryToggleText').textContent = secondaryLabel;
+    document.getElementById('interpLegendSecondaryText').textContent = secondaryLabel;
     strutLbl.style.display = DATA.hasTwoSensors ? '' : 'none';
     strutChk.checked = true;
     strutChk.addEventListener('change', drawTimeGraph);
@@ -1628,10 +1682,12 @@ function renderVisualization(DATA) {
 
       const has2 = _vis.hasTwoSensors;
       const primaryKey = _vis.primaryKey;
+      const secField = _vis.secondaryType === 'ds' ? 'pressure_ds' : 'pressure_st';
+      const secCol   = _vis.secondaryType === 'ds' ? 'pressure_ds_psi' : 'pressure_st_psi';
       const hasLEAge = recs.some(r => r.age_le != null);
       const hasSTAge = recs.some(r => r.age_st != null);
       const hdr = ['index', 'timestamp_utc', 'lat', 'lon', 'pressure_le_psi'];
-      if (has2) hdr.push('pressure_st_psi');
+      if (has2) hdr.push(secCol);
       if (hasLEAge) hdr.push('le_age');
       if (hasSTAge) hdr.push('st_age');
 
@@ -1640,7 +1696,7 @@ function renderVisualization(DATA) {
         const r = recs[i];
         const ts = new Date((r.timestamp + FIT_EPOCH) * 1000).toISOString();
         const cols = [i + 1, ts, r.lat ?? '', r.lon ?? '', primaryKey ? (r[primaryKey] ?? '') : ''];
-        if (has2) cols.push(r.pressure_st ?? '');
+        if (has2) cols.push(r[secField] ?? '');
         if (hasLEAge) cols.push(r.age_le ?? '');
         if (hasSTAge) cols.push(r.age_st ?? '');
         rows.push(cols.join(','));

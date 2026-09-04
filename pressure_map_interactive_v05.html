@@ -174,7 +174,10 @@ body {
   align-items: center;
   justify-content: center;
   gap: 18px;
-  z-index: 200;
+  /* Same reasoning as .arch-modal-backdrop: must beat Leaflet's panes/controls
+     (up to z-index:1000+) since drag-and-drop can show this over an
+     already-rendered map while replacing a session. */
+  z-index: 10000;
 }
 #processing p {
   font-family: 'Barlow Condensed', sans-serif;
@@ -191,6 +194,74 @@ body {
   animation: spin .7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Rev counter ───────────────────────────────────────────────────────── */
+#revCounter {
+  position: fixed; right: 8px; bottom: 6px;
+  font-size: 10px; color: #888; opacity: 0.35;
+  pointer-events: none; user-select: none;
+  font-family: 'Barlow', sans-serif;
+  z-index: 50;
+}
+
+/* ── Archive export modal ─────────────────────────────────────────────── */
+.arch-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  display: flex; align-items: center; justify-content: center;
+  /* Above Leaflet's own panes/controls (tile/overlay/marker panes and
+     .leaflet-control run up to z-index:1000+ in leaflet.css) — #map's
+     ancestors don't establish a stacking context, so those panes are
+     compared against this z-index directly at the root level. */
+  z-index: 10000; padding: 24px;
+}
+.arch-modal {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  width: 100%; max-width: 440px; max-height: 88vh; overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6);
+  font-family: 'Barlow', sans-serif; color: var(--brand-ink);
+}
+.arch-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-weight: 600; font-size: 14px;
+}
+.arch-modal-close {
+  background: none; border: none; color: var(--muted); font-size: 18px;
+  cursor: pointer; line-height: 1; padding: 0 4px; margin: 0;
+}
+.arch-modal-close:hover { color: var(--brand-ink); background: none; }
+.arch-modal-body { padding: 14px; display: flex; flex-direction: column; gap: 16px; }
+.arch-section-title {
+  font-size: 10px; font-weight: 600; color: var(--label);
+  text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px;
+}
+.arch-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+.arch-field:last-child { margin-bottom: 0; }
+.arch-field input, .arch-field textarea, .arch-field select {
+  background: var(--brand-bg); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--brand-ink); font-family: 'Barlow', sans-serif; font-size: 12px;
+  padding: 6px 8px; resize: vertical;
+}
+.arch-field select { cursor: pointer; }
+.arch-field input:focus, .arch-field textarea:focus, .arch-field select:focus { outline: 1px solid var(--muted); }
+.arch-note { font-size: 11px; color: var(--muted); font-style: italic; }
+.arch-error { font-size: 11px; color: var(--red); margin-top: 6px; }
+.arch-weather-result {
+  font-size: 11px; color: var(--brand-ink); margin-top: 10px;
+  display: grid; grid-template-columns: auto 1fr; gap: 4px 10px;
+}
+.arch-weather-result .k { color: var(--muted); }
+.arch-spinner {
+  display: inline-block; width: 12px; height: 12px; margin-left: 8px;
+  border: 2px solid var(--grey-mid); border-top-color: var(--red);
+  border-radius: 50%; vertical-align: middle; animation: spin .7s linear infinite;
+}
+.arch-modal-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 12px 14px; border-top: 1px solid var(--border);
+}
+.arch-modal-actions button { margin: 0; }
+#archWeatherSection.arch-disabled { opacity: 0.5; pointer-events: none; }
 
 /* ── Vis state ─────────────────────────────────────────────────────────── */
 #vis {
@@ -309,6 +380,8 @@ body {
 }
 #vis button:hover  { background: #242424; border-color: #888; }
 #vis button:active { background: #2a2a2a; }
+#vis button:disabled { opacity: 0.4; cursor: not-allowed; }
+#vis button:disabled:hover { background: #1a1a1a; border-color: #2a2a2a; }
 /* Time slider */
 #vis .time-slider-wrap { position: relative; margin: 2px 4px; height: 26px; }
 #vis .time-slider-track {
@@ -536,6 +609,53 @@ body {
   <p>Parsing&hellip;</p>
 </div>
 
+<div id="revCounter"></div>
+
+<!-- ══════════════════ Archive export modal ══════════════════ -->
+<div id="archModal" class="arch-modal-backdrop" style="display:none" aria-hidden="true">
+  <div class="arch-modal" role="dialog" aria-modal="true" aria-labelledby="archModalTitle">
+    <div class="arch-modal-header">
+      <span id="archModalTitle">Export Archive CSV</span>
+      <button type="button" id="archModalClose" class="arch-modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="arch-modal-body">
+      <div class="arch-section">
+        <div class="arch-section-title">Session metadata</div>
+        <label class="arch-field">
+          <span>Leading Edge Sensor ID</span>
+          <select id="archLeSensorId"></select>
+        </label>
+        <label class="arch-field">
+          <span>Strut Sensor ID</span>
+          <select id="archStrutSensorId"></select>
+        </label>
+        <label class="arch-field">
+          <span>Sensor Position Comment</span>
+          <textarea id="archSensorPosComment" maxlength="200" rows="2"></textarea>
+        </label>
+        <label class="arch-field">
+          <span>Weather Observations</span>
+          <textarea id="archWeatherObs" maxlength="500" rows="3"></textarea>
+        </label>
+      </div>
+      <div class="arch-section" id="archWeatherSection">
+        <div class="arch-section-title">Weather (auto-fetch)</div>
+        <div id="archNoGpsNote" class="arch-note" style="display:none">No GPS in session — weather lookup requires location.</div>
+        <div id="archWeatherControls">
+          <button type="button" id="archFetchWeatherBtn">Fetch weather for this session</button>
+          <span id="archWeatherSpinner" class="arch-spinner" style="display:none"></span>
+        </div>
+        <div id="archWeatherError" class="arch-error" style="display:none"></div>
+        <div id="archWeatherResult" class="arch-weather-result" style="display:none"></div>
+      </div>
+    </div>
+    <div class="arch-modal-actions">
+      <button type="button" id="archCancelBtn">Cancel</button>
+      <button type="button" id="archExportBtn">Export Archive CSV</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════ Visualization state ══════════════════ -->
 <div id="vis">
   <div class="container">
@@ -610,6 +730,7 @@ body {
 
     <div style="padding:8px 10px; text-align:center;">
       <button id="exportCsv" type="button" style="display:none;">Export CSV</button>
+      <button id="exportArchCsv" type="button" style="display:none;">Export Archive CSV</button>
     </div>
 
   </div>
@@ -622,6 +743,7 @@ body {
 // ── FIT constants ────────────────────────────────────────────────────────────
 const SEMI      = 180 / 2147483648;
 const FIT_EPOCH = 631065600;   // seconds between 1989-12-31 and Unix epoch
+const APP_VERSION = '0.6';
 const BASE_SIZE = {
   0x00:1, 0x01:1, 0x02:1,
   0x83:2, 0x84:2,
@@ -990,8 +1112,118 @@ async function extractFit(file) {
   return entry.async('arraybuffer');
 }
 
+// Our own "Export CSV" output — detect by header name (column order has
+// changed across versions; name-based lookup is robust to all of them).
+// Shared by plain re-import and by the data block of an ARCH archive file.
+function parseOwnExportCsv(lines) {
+  const headers = lines[0].split(',').map(h => h.trim());
+  const idx = {};
+  headers.forEach((h, i) => idx[h] = i);
+  const records = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const cols  = line.split(',');
+    const tsStr = cols[idx['timestamp_utc']]?.trim();
+    if (!tsStr) continue;
+    const ts   = Math.round(new Date(tsStr).getTime() / 1000) - FIT_EPOCH;
+    const latS = cols[idx['lat']]?.trim(), lonS = cols[idx['lon']]?.trim();
+    const lat  = latS ? parseFloat(latS) : null;
+    const lon  = lonS ? parseFloat(lonS) : null;
+    const psiS = cols[idx['pressure_le_psi']]?.trim();
+    const psi  = psiS ? parseFloat(psiS) : 0;
+    const rec = {
+      timestamp:   ts,
+      lat:         (lat !== null && !isNaN(lat)) ? lat : null,
+      lon:         (lon !== null && !isNaN(lon)) ? lon : null,
+      pressure_le: isNaN(psi) ? 0 : psi,
+    };
+    if ('pressure_ds_psi' in idx) {
+      const psi2S = cols[idx['pressure_ds_psi']]?.trim();
+      const psi2  = psi2S ? parseFloat(psi2S) : 0;
+      rec.pressure_ds = isNaN(psi2) ? 0 : psi2;
+    } else if ('pressure_st_psi' in idx) {
+      const psi2S = cols[idx['pressure_st_psi']]?.trim();
+      const psi2  = psi2S ? parseFloat(psi2S) : 0;
+      rec.pressure_st = isNaN(psi2) ? 0 : psi2;
+    }
+    if ('le_age' in idx) { const v = cols[idx['le_age']]?.trim(); if (v) rec.age_le = parseFloat(v); }
+    if ('st_age' in idx) { const v = cols[idx['st_age']]?.trim(); if (v) rec.age_st = parseFloat(v); }
+    records.push(rec);
+  }
+  if (!records.length) throw new Error('No data rows found in CSV');
+  return records;
+}
+
+// Minimal RFC4180-ish single-row reader (handles quoted fields, embedded
+// commas/newlines/doubled-quotes). Used only for the ARCH metadata block,
+// where free-text fields (comments, weather notes) may contain any of those.
+function _readCsvRow(text, pos) {
+  const fields = [];
+  let field = '';
+  let inQuotes = false;
+  let i = pos;
+  for (; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { fields.push(field); field = ''; }
+      else if (c === '\n') { fields.push(field); return { fields, nextPos: i + 1 }; }
+      else if (c === '\r') { /* skip — \n handles line end */ }
+      else field += c;
+    }
+  }
+  fields.push(field);
+  return { fields, nextPos: i };
+}
+
+// ARCH file: marker row + metadata rows + blank row + own-export data block.
+function parseArchCsv(text) {
+  let pos = 0;
+  const markerRow = _readCsvRow(text, pos);
+  pos = markerRow.nextPos;
+  const formatVersion = (markerRow.fields[1] || 'v1').trim();
+
+  const metadata = {};
+  while (pos < text.length) {
+    const row = _readCsvRow(text, pos);
+    pos = row.nextPos;
+    if (row.fields.length <= 1 && (row.fields[0] || '').trim() === '') break;
+    const key = (row.fields[0] || '').trim();
+    if (!key) continue;
+    metadata[key] = row.fields[1] !== undefined ? row.fields[1] : '';
+  }
+
+  const dataText = text.slice(pos).trim();
+  if (!dataText) throw new Error('Archive file has no data rows');
+  const records = parseOwnExportCsv(dataText.split(/\r?\n/));
+
+  return { records, sessionName: null, isArchive: true, archMetadata: metadata, archFormatVersion: formatVersion };
+}
+
+// Recover the sensor ID prefix from a matched pressure-column header, e.g.
+// "B7D4_LE_GaugePressure_PSI" -> "B7D4". Tries longer/more-specific
+// suffixes first so the LE/Strut marker itself isn't left in the result.
+function _sensorIdFromHeader(header) {
+  const suffixes = ['_LE_GaugePressure_PSI', '_Strut_GaugePressure_PSI',
+                     '_GaugePressure_PSI', '_GaugePSI'];
+  for (const s of suffixes) {
+    if (header.endsWith(s)) return header.slice(0, -s.length);
+  }
+  return '';
+}
+
 // ── CSV parser — converts PressureWerx CSV to FIT-compatible records ─────────
 function parseCSVFile(text, filename) {
+  if (text.trimStart().startsWith('PressureWerx Archive,v')) {
+    return parseArchCsv(text);
+  }
+
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) throw new Error('CSV file is empty');
   const headers = lines[0].split(',').map(h => h.trim());
@@ -1002,46 +1234,9 @@ function parseCSVFile(text, filename) {
   if (isLegacyWingLog || isLegacyMultiLog)
     throw new Error('Legacy CSV format detected — please export a fresh session from the PressureWerx app');
 
-  // Our own "Export CSV" output — detect by header name (column order has
-  // changed across versions; name-based lookup is robust to all of them).
   const isOwnExport = headers.includes('timestamp_utc') && headers.includes('pressure_le_psi');
   if (isOwnExport) {
-    const idx = {};
-    headers.forEach((h, i) => idx[h] = i);
-    const records = [];
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      const cols  = line.split(',');
-      const tsStr = cols[idx['timestamp_utc']]?.trim();
-      if (!tsStr) continue;
-      const ts   = Math.round(new Date(tsStr).getTime() / 1000) - FIT_EPOCH;
-      const latS = cols[idx['lat']]?.trim(), lonS = cols[idx['lon']]?.trim();
-      const lat  = latS ? parseFloat(latS) : null;
-      const lon  = lonS ? parseFloat(lonS) : null;
-      const psiS = cols[idx['pressure_le_psi']]?.trim();
-      const psi  = psiS ? parseFloat(psiS) : 0;
-      const rec = {
-        timestamp:   ts,
-        lat:         (lat !== null && !isNaN(lat)) ? lat : null,
-        lon:         (lon !== null && !isNaN(lon)) ? lon : null,
-        pressure_le: isNaN(psi) ? 0 : psi,
-      };
-      if ('pressure_ds_psi' in idx) {
-        const psi2S = cols[idx['pressure_ds_psi']]?.trim();
-        const psi2  = psi2S ? parseFloat(psi2S) : 0;
-        rec.pressure_ds = isNaN(psi2) ? 0 : psi2;
-      } else if ('pressure_st_psi' in idx) {
-        const psi2S = cols[idx['pressure_st_psi']]?.trim();
-        const psi2  = psi2S ? parseFloat(psi2S) : 0;
-        rec.pressure_st = isNaN(psi2) ? 0 : psi2;
-      }
-      if ('le_age' in idx) { const v = cols[idx['le_age']]?.trim(); if (v) rec.age_le = parseFloat(v); }
-      if ('st_age' in idx) { const v = cols[idx['st_age']]?.trim(); if (v) rec.age_st = parseFloat(v); }
-      records.push(rec);
-    }
-    if (!records.length) throw new Error('No data rows found in CSV');
-    return { records, sessionName: null };
+    return { records: parseOwnExportCsv(lines), sessionName: null };
   }
 
   // Derive session name from filename prefix
@@ -1078,6 +1273,18 @@ function parseCSVFile(text, filename) {
   const firstPsiCol  = psiCols[0];
   const secondPsiCol = psiCols[1] ?? -1;
 
+  // Sensor ID pre-population: WingLog/WatchLog headers reliably carry a
+  // 4-char hex sensor ID as a prefix (e.g. B7D4_LE_GaugePressure_PSI).
+  // MultiLog uses the same trick but the prefix is often a free-form human
+  // label rather than a real ID, so it's deliberately excluded here.
+  let sensorIds;
+  if (base.startsWith('WingLog_') || base.startsWith('WatchLog_')) {
+    sensorIds = {
+      le: _sensorIdFromHeader(headers[firstPsiCol]),
+      st: secondPsiCol >= 0 ? _sensorIdFromHeader(headers[secondPsiCol]) : '',
+    };
+  }
+
   // Build FIT-compatible records: timestamp in FIT epoch seconds, lat/lon as decimals
   const records = [];
   for (let i = 1; i < lines.length; i++) {
@@ -1104,7 +1311,7 @@ function parseCSVFile(text, filename) {
     records.push(rec);
   }
   if (!records.length) throw new Error('No data rows found in CSV');
-  return { records, sessionName };
+  return { records, sessionName, sensorIds };
 }
 
 // ── Main file handler ────────────────────────────────────────────────────────
@@ -1119,11 +1326,15 @@ async function handleFile(file) {
   try {
     if (file.name.toLowerCase().endsWith('.csv')) {
       const text               = await file.text();
-      const { records, sessionName } = parseCSVFile(text, file.name);
+      const parsed              = parseCSVFile(text, file.name);
+      const { records, sessionName } = parsed;
       if (!records.length) throw new Error('File contained no data records');
       const DATA               = processRecords(records);
       if (sessionName) DATA.t_date_str = sessionName;
       DATA._rawRecords         = records;
+      DATA.isArchive           = !!parsed.isArchive;
+      DATA.archMetadata        = parsed.archMetadata || null;
+      DATA.sensorIds           = parsed.sensorIds || null;
       renderVisualization(DATA);
     } else {
       const ab             = await extractFit(file);
@@ -1199,6 +1410,9 @@ function renderVisualization(DATA) {
   _vis.primaryKey    = DATA.primaryKey;
   _vis.secondaryType = DATA.secondaryType;
   _vis.fileName      = document.getElementById('metaFile').textContent;
+  _vis.isArchive     = !!DATA.isArchive;
+  _vis.archMetadata  = DATA.archMetadata || null;
+  _vis.sensorIds     = DATA.sensorIds || null;
   document.getElementById('pressureControlsPanel').style.display = '';
   document.getElementById('timeWindowPanel').style.display = '';
 
@@ -1677,30 +1891,8 @@ function renderVisualization(DATA) {
     const exportBtn = document.getElementById('exportCsv');
     exportBtn.style.display = '';
     exportBtn.onclick = () => {
-      const recs = _vis.rawRecords;
-      if (!recs || !recs.length) return;
-
-      const has2 = _vis.hasTwoSensors;
-      const primaryKey = _vis.primaryKey;
-      const secField = _vis.secondaryType === 'ds' ? 'pressure_ds' : 'pressure_st';
-      const secCol   = _vis.secondaryType === 'ds' ? 'pressure_ds_psi' : 'pressure_st_psi';
-      const hasLEAge = recs.some(r => r.age_le != null);
-      const hasSTAge = recs.some(r => r.age_st != null);
-      const hdr = ['index', 'timestamp_utc', 'lat', 'lon', 'pressure_le_psi'];
-      if (has2) hdr.push(secCol);
-      if (hasLEAge) hdr.push('le_age');
-      if (hasSTAge) hdr.push('st_age');
-
-      const rows = [hdr.join(',')];
-      for (let i = 0; i < recs.length; i++) {
-        const r = recs[i];
-        const ts = new Date((r.timestamp + FIT_EPOCH) * 1000).toISOString();
-        const cols = [i + 1, ts, r.lat ?? '', r.lon ?? '', primaryKey ? (r[primaryKey] ?? '') : ''];
-        if (has2) cols.push(r[secField] ?? '');
-        if (hasLEAge) cols.push(r.age_le ?? '');
-        if (hasSTAge) cols.push(r.age_st ?? '');
-        rows.push(cols.join(','));
-      }
+      const rows = buildDataCsvRows(_vis);
+      if (!rows) return;
 
       const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
@@ -1710,6 +1902,21 @@ function renderVisualization(DATA) {
       a.download = base + '_export.csv';
       a.click();
       URL.revokeObjectURL(url);
+    };
+
+    // ── Archive CSV export ──
+    const exportArchBtn = document.getElementById('exportArchCsv');
+    exportArchBtn.style.display = '';
+    exportArchBtn.disabled = _vis.isArchive;
+    exportArchBtn.title = _vis.isArchive
+      ? "Can't archive an archive — this file is already an ARCH file."
+      : '';
+    exportArchBtn.onclick = () => {
+      if (_vis.isArchive) {
+        alert("Can't archive an archive — this file is already an ARCH file.");
+        return;
+      }
+      _openArchModal();
     };
 
     const onKey=e=>{
@@ -1735,6 +1942,287 @@ function renderVisualization(DATA) {
 
   }, 50);  // end setTimeout — gives #vis time to paint before Leaflet measures
 }
+
+// ── Shared data-CSV builder (used by both Export CSV and Export Archive CSV) ─
+function buildDataCsvRows(vis) {
+  const recs = vis.rawRecords;
+  if (!recs || !recs.length) return null;
+
+  const has2 = vis.hasTwoSensors;
+  const primaryKey = vis.primaryKey;
+  const secField = vis.secondaryType === 'ds' ? 'pressure_ds' : 'pressure_st';
+  const secCol   = vis.secondaryType === 'ds' ? 'pressure_ds_psi' : 'pressure_st_psi';
+  const hasLEAge = recs.some(r => r.age_le != null);
+  const hasSTAge = recs.some(r => r.age_st != null);
+  const hdr = ['index', 'timestamp_utc', 'lat', 'lon', 'pressure_le_psi'];
+  if (has2) hdr.push(secCol);
+  if (hasLEAge) hdr.push('le_age');
+  if (hasSTAge) hdr.push('st_age');
+
+  const rows = [hdr.join(',')];
+  for (let i = 0; i < recs.length; i++) {
+    const r = recs[i];
+    const ts = new Date((r.timestamp + FIT_EPOCH) * 1000).toISOString();
+    const cols = [i + 1, ts, r.lat ?? '', r.lon ?? '', primaryKey ? (r[primaryKey] ?? '') : ''];
+    if (has2) cols.push(r[secField] ?? '');
+    if (hasLEAge) cols.push(r.age_le ?? '');
+    if (hasSTAge) cols.push(r.age_st ?? '');
+    rows.push(cols.join(','));
+  }
+  return rows;
+}
+
+// ── Archive CSV: filename, weather fetch, CSV escaping, modal wiring ─────────
+function csvEscapeField(v) {
+  const s = v == null ? '' : String(v);
+  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+// Fleet only has these 10 physical sensors — Sensor ID fields are a strict
+// pick list against this set (plus blank/"none") so values can't be
+// fat-fingered as free text.
+const VALID_SENSOR_IDS = ['5A56', '77D7', 'D8B6', '50DA', 'D727', 'F7BE', '1651', '3323', '7E53', 'B65B'];
+
+function _populateSensorIdSelect(sel) {
+  sel.innerHTML = '';
+  const blank = document.createElement('option');
+  blank.value = '';
+  blank.textContent = '(none)';
+  sel.appendChild(blank);
+  for (const id of VALID_SENSOR_IDS) {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = id;
+    sel.appendChild(opt);
+  }
+}
+_populateSensorIdSelect(document.getElementById('archLeSensorId'));
+_populateSensorIdSelect(document.getElementById('archStrutSensorId'));
+
+const WMO_CONDITIONS = {
+  0: 'Clear', 1: 'Partly cloudy', 2: 'Partly cloudy', 3: 'Partly cloudy',
+  45: 'Fog', 48: 'Fog',
+  51: 'Drizzle', 53: 'Drizzle', 55: 'Drizzle',
+  61: 'Rain', 63: 'Rain', 65: 'Rain',
+  71: 'Snow', 73: 'Snow', 75: 'Snow',
+  80: 'Rain showers', 81: 'Rain showers', 82: 'Rain showers',
+  95: 'Thunderstorm',
+  96: 'Thunderstorm with hail', 99: 'Thunderstorm with hail',
+};
+function _wmoCondition(code) {
+  if (code == null || code === '') return '';
+  return WMO_CONDITIONS[code] || `Code ${code}`;
+}
+
+// FIT/ZIP source: ARCH_<fit-base>_<YYYY-MM-DD>.csv (date = first-record UTC date).
+// CSV source: ARCH_<original-filename> (no date appended).
+function _archFilename(vis) {
+  const orig = vis.fileName || 'session.csv';
+  const isFitSource = /\.(fit|zip)$/i.test(orig);
+  if (!isFitSource) return 'ARCH_' + orig;
+
+  const base = orig.replace(/\.(fit|zip)$/i, '');
+  const first = vis.rawRecords && vis.rawRecords[0];
+  const dateStr = first ? '_' + new Date((first.timestamp + FIT_EPOCH) * 1000).toISOString().slice(0, 10) : '';
+  return `ARCH_${base}${dateStr}.csv`;
+}
+
+async function fetchSessionWeather(vis) {
+  const recs = vis.rawRecords || [];
+  const withGps = recs.find(r => r.lat != null && r.lon != null);
+  if (!withGps) throw new Error('No GPS in session');
+
+  const sessionDate = new Date((withGps.timestamp + FIT_EPOCH) * 1000);
+  const daysAgo = (Date.now() - sessionDate.getTime()) / (1000 * 60 * 60 * 24);
+  const useForecast = daysAgo < 6;
+  const dateStr = sessionDate.toISOString().slice(0, 10);
+
+  const hourlyVars = 'temperature_2m,dew_point_2m,relative_humidity_2m,pressure_msl,cloud_cover,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code';
+  const params = new URLSearchParams({
+    latitude: withGps.lat, longitude: withGps.lon,
+    hourly: hourlyVars,
+    temperature_unit: 'celsius', wind_speed_unit: 'kn', precipitation_unit: 'mm',
+    timezone: 'UTC',
+  });
+  let base;
+  if (useForecast) {
+    base = 'https://api.open-meteo.com/v1/forecast';
+    params.set('past_days', '6');
+    params.set('forecast_days', '1');
+  } else {
+    base = 'https://archive-api.open-meteo.com/v1/archive';
+    params.set('start_date', dateStr);
+    params.set('end_date', dateStr);
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  let resp;
+  try {
+    resp = await fetch(`${base}?${params.toString()}`, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  if (!resp.ok) throw new Error(`Weather API returned ${resp.status}`);
+  const json = await resp.json();
+  const times = json.hourly?.time;
+  if (!times || !times.length) throw new Error('Weather API returned no data');
+
+  const targetMs = sessionDate.getTime();
+  let bestIdx = 0, bestDiff = Infinity;
+  for (let i = 0; i < times.length; i++) {
+    const diff = Math.abs(new Date(times[i] + ':00Z').getTime() - targetMs);
+    if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+  }
+
+  const h = json.hourly;
+  const code = h.weather_code ? h.weather_code[bestIdx] : null;
+  return {
+    temperature_c:      h.temperature_2m?.[bestIdx] ?? '',
+    dewpoint_c:          h.dew_point_2m?.[bestIdx] ?? '',
+    relative_humidity:  h.relative_humidity_2m?.[bestIdx] ?? '',
+    pressure_msl_hpa:   h.pressure_msl?.[bestIdx] ?? '',
+    cloud_cover:        h.cloud_cover?.[bestIdx] ?? '',
+    precipitation_mm:   h.precipitation?.[bestIdx] ?? '',
+    wind_speed_kn:      h.wind_speed_10m?.[bestIdx] ?? '',
+    wind_direction_deg: h.wind_direction_10m?.[bestIdx] ?? '',
+    wind_gusts_kn:      h.wind_gusts_10m?.[bestIdx] ?? '',
+    weather_code:       code ?? '',
+    condition:          _wmoCondition(code),
+    fetchedAt:          new Date().toISOString(),
+  };
+}
+
+let _archWeatherData = null;
+
+function _openArchModal() {
+  _archWeatherData = null;
+  const leFromFile = (_vis.sensorIds && _vis.sensorIds.le) || '';
+  const stFromFile = (_vis.sensorIds && _vis.sensorIds.st) || '';
+  document.getElementById('archLeSensorId').value    = VALID_SENSOR_IDS.includes(leFromFile) ? leFromFile : '';
+  document.getElementById('archStrutSensorId').value = VALID_SENSOR_IDS.includes(stFromFile) ? stFromFile : '';
+  document.getElementById('archSensorPosComment').value = '';
+  document.getElementById('archWeatherObs').value = '';
+  document.getElementById('archWeatherError').style.display = 'none';
+  document.getElementById('archWeatherResult').style.display = 'none';
+  document.getElementById('archWeatherSpinner').style.display = 'none';
+
+  const hasGps = (_vis.rawRecords || []).some(r => r.lat != null && r.lon != null);
+  const weatherSection = document.getElementById('archWeatherSection');
+  const noGpsNote       = document.getElementById('archNoGpsNote');
+  const controls        = document.getElementById('archWeatherControls');
+  if (hasGps) {
+    weatherSection.classList.remove('arch-disabled');
+    noGpsNote.style.display = 'none';
+    controls.style.display = '';
+  } else {
+    weatherSection.classList.add('arch-disabled');
+    noGpsNote.style.display = '';
+    controls.style.display = 'none';
+  }
+
+  const modal = document.getElementById('archModal');
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function _closeArchModal() {
+  const modal = document.getElementById('archModal');
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+document.getElementById('archModalClose').addEventListener('click', _closeArchModal);
+document.getElementById('archCancelBtn').addEventListener('click', _closeArchModal);
+document.getElementById('archModal').addEventListener('click', e => {
+  if (e.target.id === 'archModal') _closeArchModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('archModal').style.display !== 'none') {
+    _closeArchModal();
+  }
+});
+
+document.getElementById('archFetchWeatherBtn').addEventListener('click', async () => {
+  const btn      = document.getElementById('archFetchWeatherBtn');
+  const spinner  = document.getElementById('archWeatherSpinner');
+  const errEl    = document.getElementById('archWeatherError');
+  const resultEl = document.getElementById('archWeatherResult');
+  btn.disabled = true;
+  spinner.style.display = '';
+  errEl.style.display = 'none';
+  resultEl.style.display = 'none';
+  try {
+    const w = await fetchSessionWeather(_vis);
+    _archWeatherData = w;
+    resultEl.innerHTML = `
+      <span class="k">Temp</span><span>${w.temperature_c} &deg;C</span>
+      <span class="k">Dewpoint</span><span>${w.dewpoint_c} &deg;C</span>
+      <span class="k">Humidity</span><span>${w.relative_humidity}%</span>
+      <span class="k">Pressure</span><span>${w.pressure_msl_hpa} hPa</span>
+      <span class="k">Cloud cover</span><span>${w.cloud_cover}%</span>
+      <span class="k">Precipitation</span><span>${w.precipitation_mm} mm</span>
+      <span class="k">Wind</span><span>${w.wind_speed_kn} kn @ ${w.wind_direction_deg}&deg;</span>
+      <span class="k">Gusts</span><span>${w.wind_gusts_kn} kn</span>
+      <span class="k">Condition</span><span>${w.condition || '—'}</span>
+    `;
+    resultEl.style.display = 'grid';
+  } catch (err) {
+    console.error('[PressureWerx] weather fetch failed', err);
+    errEl.textContent = 'Weather lookup unavailable — you can still export.';
+    errEl.style.display = '';
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+  }
+});
+
+document.getElementById('archExportBtn').addEventListener('click', () => {
+  const dataRows = buildDataCsvRows(_vis);
+  if (!dataRows) { _closeArchModal(); return; }
+
+  const w = _archWeatherData;
+  const nowIso = new Date().toISOString();
+  const metaRows = [
+    ['Leading Edge Sensor ID', document.getElementById('archLeSensorId').value],
+    ['Strut Sensor ID', document.getElementById('archStrutSensorId').value],
+    ['Sensor Position Comment', document.getElementById('archSensorPosComment').value],
+    ['Weather Observations', document.getElementById('archWeatherObs').value],
+    ['Weather Temperature C', w ? w.temperature_c : ''],
+    ['Weather Dewpoint C', w ? w.dewpoint_c : ''],
+    ['Weather Relative Humidity %', w ? w.relative_humidity : ''],
+    ['Weather Pressure MSL hPa', w ? w.pressure_msl_hpa : ''],
+    ['Weather Cloud Cover %', w ? w.cloud_cover : ''],
+    ['Weather Precipitation mm', w ? w.precipitation_mm : ''],
+    ['Weather Wind Speed kn', w ? w.wind_speed_kn : ''],
+    ['Weather Wind Direction deg', w ? w.wind_direction_deg : ''],
+    ['Weather Wind Gusts kn', w ? w.wind_gusts_kn : ''],
+    ['Weather Code', w ? w.weather_code : ''],
+    ['Weather Condition', w ? w.condition : ''],
+    ['Weather Source', w ? 'Open-Meteo' : ''],
+    ['Weather Fetched At', w ? w.fetchedAt : ''],
+    ['Archive Created At', nowIso],
+    ['Archive App Version', APP_VERSION],
+  ];
+
+  const lines = ['PressureWerx Archive,v1'];
+  for (const [key, val] of metaRows) lines.push(`${key},${csvEscapeField(val)}`);
+  lines.push('');
+  lines.push(...dataRows);
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = _archFilename(_vis);
+  a.click();
+  URL.revokeObjectURL(url);
+
+  _closeArchModal();
+});
+
+document.getElementById('revCounter').textContent = 'v' + APP_VERSION;
 
 // ── "Load different file" button ─────────────────────────────────────────────
 document.getElementById('loadDiff').addEventListener('click', () => {

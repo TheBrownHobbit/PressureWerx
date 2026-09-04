@@ -221,13 +221,17 @@ body {
   font-family: 'Barlow', sans-serif; color: var(--brand-ink);
 }
 .arch-modal-header {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 12px 14px; border-bottom: 1px solid var(--border);
   font-weight: 600; font-size: 14px;
+}
+#archModalTitle {
+  font-size: 13px; word-break: break-all; overflow-wrap: anywhere;
 }
 .arch-modal-close {
   background: none; border: none; color: var(--muted); font-size: 18px;
   cursor: pointer; line-height: 1; padding: 0 4px; margin: 0;
+  flex-shrink: 0;
 }
 .arch-modal-close:hover { color: var(--brand-ink); background: none; }
 .arch-modal-body { padding: 14px; display: flex; flex-direction: column; gap: 16px; }
@@ -622,6 +626,10 @@ body {
       <div class="arch-section">
         <div class="arch-section-title">Session metadata</div>
         <label class="arch-field">
+          <span>Wing Make/Model</span>
+          <input type="text" id="archWingMakeModel" maxlength="200">
+        </label>
+        <label class="arch-field">
           <span>Leading Edge Sensor ID</span>
           <select id="archLeSensorId"></select>
         </label>
@@ -634,16 +642,16 @@ body {
           <textarea id="archSensorPosComment" maxlength="200" rows="2"></textarea>
         </label>
         <label class="arch-field">
-          <span>Weather Observations</span>
-          <textarea id="archWeatherObs" maxlength="500" rows="3"></textarea>
+          <span>Session Notes</span>
+          <textarea id="archSessionNotes" maxlength="500" rows="3"></textarea>
         </label>
       </div>
       <div class="arch-section" id="archWeatherSection">
         <div class="arch-section-title">Weather (auto-fetch)</div>
         <div id="archNoGpsNote" class="arch-note" style="display:none">No GPS in session — weather lookup requires location.</div>
         <div id="archWeatherControls">
-          <button type="button" id="archFetchWeatherBtn">Fetch weather for this session</button>
           <span id="archWeatherSpinner" class="arch-spinner" style="display:none"></span>
+          <span id="archWeatherLoadingText" class="arch-note" style="display:none">Fetching weather&hellip;</span>
         </div>
         <div id="archWeatherError" class="arch-error" style="display:none"></div>
         <div id="archWeatherResult" class="arch-weather-result" style="display:none"></div>
@@ -1982,7 +1990,7 @@ function csvEscapeField(v) {
 // Fleet only has these 10 physical sensors — Sensor ID fields are a strict
 // pick list against this set (plus blank/"none") so values can't be
 // fat-fingered as free text.
-const VALID_SENSOR_IDS = ['5A56', '77D7', 'D8B6', '50DA', 'D727', 'F7BE', '1651', '3323', '7E53', 'B65B'];
+const VALID_SENSOR_IDS = ['50DA', 'D8B6', '77D7', '5A56', '1651', 'D727', '7E53', 'F7BE', '3323', 'B65B'];
 
 function _populateSensorIdSelect(sel) {
   sel.innerHTML = '';
@@ -2015,17 +2023,18 @@ function _wmoCondition(code) {
   return WMO_CONDITIONS[code] || `Code ${code}`;
 }
 
-// FIT/ZIP source: ARCH_<fit-base>_<YYYY-MM-DD>.csv (date = first-record UTC date).
-// CSV source: ARCH_<original-filename> (no date appended).
+// ARCH_YYYY_MM_DD_<original-name-without-extension>.csv, for every source
+// (FIT, ZIP, or CSV) — the leading date is always the activity's date (the
+// first record's UTC date), never today's date, so archived files sort
+// alphabetically into chronological order regardless of when they were
+// exported.
 function _archFilename(vis) {
-  const orig = vis.fileName || 'session.csv';
-  const isFitSource = /\.(fit|zip)$/i.test(orig);
-  if (!isFitSource) return 'ARCH_' + orig;
-
-  const base = orig.replace(/\.(fit|zip)$/i, '');
+  const orig = vis.fileName || 'session';
+  const base = orig.replace(/\.(fit|zip|csv)$/i, '');
   const first = vis.rawRecords && vis.rawRecords[0];
-  const dateStr = first ? '_' + new Date((first.timestamp + FIT_EPOCH) * 1000).toISOString().slice(0, 10) : '';
-  return `ARCH_${base}${dateStr}.csv`;
+  const d = first ? new Date((first.timestamp + FIT_EPOCH) * 1000) : new Date();
+  const dateStr = d.toISOString().slice(0, 10).replace(/-/g, '_');
+  return `ARCH_${dateStr}_${base}.csv`;
 }
 
 async function fetchSessionWeather(vis) {
@@ -2098,12 +2107,14 @@ let _archWeatherData = null;
 
 function _openArchModal() {
   _archWeatherData = null;
+  document.getElementById('archModalTitle').textContent = 'Creating: ' + _archFilename(_vis);
   const leFromFile = (_vis.sensorIds && _vis.sensorIds.le) || '';
   const stFromFile = (_vis.sensorIds && _vis.sensorIds.st) || '';
+  document.getElementById('archWingMakeModel').value = '';
   document.getElementById('archLeSensorId').value    = VALID_SENSOR_IDS.includes(leFromFile) ? leFromFile : '';
   document.getElementById('archStrutSensorId').value = VALID_SENSOR_IDS.includes(stFromFile) ? stFromFile : '';
   document.getElementById('archSensorPosComment').value = '';
-  document.getElementById('archWeatherObs').value = '';
+  document.getElementById('archSessionNotes').value = '';
   document.getElementById('archWeatherError').style.display = 'none';
   document.getElementById('archWeatherResult').style.display = 'none';
   document.getElementById('archWeatherSpinner').style.display = 'none';
@@ -2116,6 +2127,7 @@ function _openArchModal() {
     weatherSection.classList.remove('arch-disabled');
     noGpsNote.style.display = 'none';
     controls.style.display = '';
+    _runWeatherFetch();
   } else {
     weatherSection.classList.add('arch-disabled');
     noGpsNote.style.display = '';
@@ -2144,13 +2156,16 @@ document.addEventListener('keydown', e => {
   }
 });
 
-document.getElementById('archFetchWeatherBtn').addEventListener('click', async () => {
-  const btn      = document.getElementById('archFetchWeatherBtn');
-  const spinner  = document.getElementById('archWeatherSpinner');
-  const errEl    = document.getElementById('archWeatherError');
-  const resultEl = document.getElementById('archWeatherResult');
-  btn.disabled = true;
+// Runs the weather lookup and updates the modal UI. Called automatically
+// whenever the modal opens for a GPS session — no user action needed. A
+// failed/timed-out lookup can be retried by closing and reopening the modal.
+async function _runWeatherFetch() {
+  const spinner     = document.getElementById('archWeatherSpinner');
+  const loadingText = document.getElementById('archWeatherLoadingText');
+  const errEl       = document.getElementById('archWeatherError');
+  const resultEl    = document.getElementById('archWeatherResult');
   spinner.style.display = '';
+  loadingText.style.display = '';
   errEl.style.display = 'none';
   resultEl.style.display = 'none';
   try {
@@ -2173,10 +2188,10 @@ document.getElementById('archFetchWeatherBtn').addEventListener('click', async (
     errEl.textContent = 'Weather lookup unavailable — you can still export.';
     errEl.style.display = '';
   } finally {
-    btn.disabled = false;
     spinner.style.display = 'none';
+    loadingText.style.display = 'none';
   }
-});
+}
 
 document.getElementById('archExportBtn').addEventListener('click', () => {
   const dataRows = buildDataCsvRows(_vis);
@@ -2185,10 +2200,11 @@ document.getElementById('archExportBtn').addEventListener('click', () => {
   const w = _archWeatherData;
   const nowIso = new Date().toISOString();
   const metaRows = [
+    ['Wing Make/Model', document.getElementById('archWingMakeModel').value],
     ['Leading Edge Sensor ID', document.getElementById('archLeSensorId').value],
     ['Strut Sensor ID', document.getElementById('archStrutSensorId').value],
     ['Sensor Position Comment', document.getElementById('archSensorPosComment').value],
-    ['Weather Observations', document.getElementById('archWeatherObs').value],
+    ['Session Notes', document.getElementById('archSessionNotes').value],
     ['Weather Temperature C', w ? w.temperature_c : ''],
     ['Weather Dewpoint C', w ? w.dewpoint_c : ''],
     ['Weather Relative Humidity %', w ? w.relative_humidity : ''],

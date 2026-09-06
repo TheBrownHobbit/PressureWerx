@@ -2133,6 +2133,7 @@ function _openArchModal() {
     weatherSection.classList.add('arch-disabled');
     noGpsNote.style.display = '';
     controls.style.display = 'none';
+    document.getElementById('archExportBtn').disabled = false;
   }
 
   const modal = document.getElementById('archModal');
@@ -2160,15 +2161,19 @@ document.addEventListener('keydown', e => {
 // Runs the weather lookup and updates the modal UI. Called automatically
 // whenever the modal opens for a GPS session — no user action needed. A
 // failed/timed-out lookup can be retried by closing and reopening the modal.
+// Export stays disabled for the duration so it can't be clicked mid-fetch
+// and silently write blank weather fields.
 async function _runWeatherFetch() {
   const spinner     = document.getElementById('archWeatherSpinner');
   const loadingText = document.getElementById('archWeatherLoadingText');
   const errEl       = document.getElementById('archWeatherError');
   const resultEl    = document.getElementById('archWeatherResult');
+  const exportBtn   = document.getElementById('archExportBtn');
   spinner.style.display = '';
   loadingText.style.display = '';
   errEl.style.display = 'none';
   resultEl.style.display = 'none';
+  exportBtn.disabled = true;
   try {
     const w = await fetchSessionWeather(_vis);
     _archWeatherData = w;
@@ -2191,6 +2196,7 @@ async function _runWeatherFetch() {
   } finally {
     spinner.style.display = 'none';
     loadingText.style.display = 'none';
+    exportBtn.disabled = false;
   }
 }
 
@@ -2198,13 +2204,24 @@ document.getElementById('archExportBtn').addEventListener('click', () => {
   const dataRows = buildDataCsvRows(_vis);
   if (!dataRows) { _closeArchModal(); return; }
 
+  const wingMakeModel    = document.getElementById('archWingMakeModel').value;
+  const leSensorId       = document.getElementById('archLeSensorId').value;
+  const strutSensorId    = document.getElementById('archStrutSensorId').value;
+  const sensorPosComment = document.getElementById('archSensorPosComment').value;
+
+  const blankFields = [];
+  if (!wingMakeModel)    blankFields.push('Wing Make/Model');
+  if (!leSensorId)       blankFields.push('Leading Edge Sensor ID');
+  if (!sensorPosComment) blankFields.push('Sensor Position Comment');
+  if (blankFields.length) console.warn('[PressureWerx] archive export: blank at export time —', blankFields.join(', '));
+
   const w = _archWeatherData;
   const nowIso = new Date().toISOString();
   const metaRows = [
-    ['Wing Make/Model', document.getElementById('archWingMakeModel').value],
-    ['Leading Edge Sensor ID', document.getElementById('archLeSensorId').value],
-    ['Strut Sensor ID', document.getElementById('archStrutSensorId').value],
-    ['Sensor Position Comment', document.getElementById('archSensorPosComment').value],
+    ['Wing Make/Model', wingMakeModel],
+    ['Leading Edge Sensor ID', leSensorId],
+    ['Strut Sensor ID', strutSensorId],
+    ['Sensor Position Comment', sensorPosComment],
     ['Session Notes', document.getElementById('archSessionNotes').value],
     ['Weather Temperature C', w ? w.temperature_c : ''],
     ['Weather Dewpoint C', w ? w.dewpoint_c : ''],

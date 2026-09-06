@@ -1990,7 +1990,8 @@ function csvEscapeField(v) {
 // Fleet only has these 10 physical sensors — Sensor ID fields are a strict
 // pick list against this set (plus blank/"none") so values can't be
 // fat-fingered as free text.
-const VALID_SENSOR_IDS = ['50DA', 'D8B6', '77D7', '5A56', '1651', 'D727', '7E53', 'F7BE', '3323', 'B65B'];
+const VALID_SENSOR_IDS = ['50DA', 'D8B6', '77D7', '5A56', '1651', 'D727', '7E53', 'F7BE', '3323', 'B65B',
+                           'Unknown Xiao', 'Unknown PressurePoint', 'Unknown'];
 
 function _populateSensorIdSelect(sel) {
   sel.innerHTML = '';

@@ -19,7 +19,7 @@
   .reveal-delay-1{transition-delay:.15s}.reveal-delay-2{transition-delay:.3s}.reveal-delay-3{transition-delay:.45s}
 
   /* ── Mode toggle system ── */
-  [data-mode]{display:none;transition:opacity .22s ease}
+  [data-mode][data-mode]{display:none;transition:opacity .22s ease}
   body.mode-rider [data-mode="rider"]{display:block}
   body.mode-developer [data-mode="developer"]{display:block}
   [data-mode].inline{display:none}
@@ -43,6 +43,10 @@
   .divider{width:100%;max-width:680px;height:1px;background:var(--grey-mid);margin:28px 0 22px;position:relative;z-index:1}
   .tagline{font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:36px;line-height:1.35;letter-spacing:5px;text-transform:uppercase;color:var(--grey-light);position:relative;z-index:1;text-align:center;min-height:2.7em}
   .tagline em{font-style:normal;color:var(--red)}
+  .scroll-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1;animation:bounce 2.2s ease-in-out infinite;opacity:0;transition:opacity 1s ease 1.2s}
+  .scroll-hint.visible{opacity:1}
+  .scroll-hint span{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.75)}
+  @keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(7px)}}
   .red-bar{position:absolute;bottom:0;left:0;width:100%;height:4px;background:var(--red)}
 
   /* ── The Choice ── */
@@ -218,6 +222,7 @@
     <button type="button" class="choice-pill choice-pill-developer" data-mode-btn="developer">For Developers</button>
   </div>
   <p class="choice-hint reveal reveal-delay-3">Choose your world.</p>
+  <div class="scroll-hint" id="scrollHint"><span>Scroll</span><svg width="14" height="18" viewBox="0 0 14 18" fill="none"><path d="M7 0v14M1 8l6 6 6-6" stroke="rgba(255,255,255,.75)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
   <div class="red-bar"></div>
 </section>
 
@@ -243,7 +248,7 @@
       </div>
       <h2 class="section-h reveal reveal-delay-1">
         <span data-mode="rider" class="inline">1 PSI <em>matters.</em></span>
-        <span data-mode="developer" class="inline">Same conditions. Different wings. Now you can <em>see it.</em></span>
+        <span data-mode="developer" class="inline">Rider feedback lacks context. Now you can <em>see it.</em></span>
       </h2>
     </div>
     <div class="right-panel">
@@ -327,7 +332,7 @@
     <span data-mode="rider" class="inline">Fits your setup. Set it and forget it.</span>
     <span data-mode="developer" class="inline">Multiple integration paths for any construction.</span>
   </p>
-  <div class="section-callout" data-mode="developer">NEW: Inter-skin pressure sensing for dual-skin constructions — measure ram air intake performance directly.</div>
+  <div class="section-callout" data-mode="developer">Dual Skin Low pressure configuration also available - measure ram air intake performance directly</div>
 </section>
 
 <section class="section" id="experience">
@@ -353,6 +358,7 @@
         <span data-mode="rider" class="inline">Glanceable pressure on your Apple Watch or Garmin, right inside your activity. Purpose-built for the water — not another screen to fight with mid-session.</span>
         <span data-mode="developer" class="inline">Every prototype, every condition, every rider — logged and comparable. Multi-sensor concurrent logging across BLE and ANT+ dual transport.</span>
       </p>
+      <div class="section-callout" data-mode="developer">iOS App for sensor configuration and advanced data gathering with up to 8 sensors.</div>
       <div class="section-callouts">
         <span data-mode="rider" class="inline">Real-time PSI</span>
         <span data-mode="rider" class="inline">Trend arrows</span>
@@ -376,7 +382,7 @@
     <span data-mode="rider" class="inline">See exactly how your pressures changed. Correlate with wind, temperature, and time on the water. Know your wing's sweet spot — and nail it when results matter. Racing, freestyle, or a long ocean mission.</span>
     <span data-mode="developer" class="inline">Compare prototypes head-to-head. See how materials respond to identical conditions. Quantify your performance envelope. Refine recommended pressures with data, not guesswork.</span>
   </p>
-  <div class="section-callout" data-mode="developer">With inter-skin sensors, visualise ram air pressure differential — a measurement that didn't exist until last week.</div>
+  <div class="section-callout" data-mode="developer">With Dual skin sensor - visualise ram air pressure around the race course.</div>
   <a class="map-preview reveal reveal-delay-3" href="pressure_map_interactive_v05.html?demo" target="_blank" rel="noopener" aria-label="Open the interactive map viewer with a sample session loaded">
     <img src="map-preview.jpg" alt="PressureWerx interactive map viewer showing a sample session's GPS track and pressure trace over time">
     <span class="map-preview-cta">Open Interactive Map →</span>
@@ -388,13 +394,19 @@
   <div class="section-number reveal">Collaborate</div>
   <div class="section-rule reveal reveal-delay-1"></div>
   <h2 class="section-title reveal reveal-delay-2">
-    <span data-mode="rider" class="inline">Partner with <em>your wing brand.</em></span>
+    <span data-mode="rider" class="inline">Partner with <em>a wing brand.</em></span>
     <span data-mode="developer" class="inline">Deploy a toolkit. <em>Build better wings.</em></span>
   </h2>
   <p class="section-subtitle reveal reveal-delay-3">
-    <span data-mode="rider" class="inline">We're working with leading wing manufacturers to integrate PressureWerx. Ask your brand — or tell us which brand you ride and we'll start the conversation.</span>
+    <span data-mode="rider" class="inline">We're looking for the right manufacturer to prove what integrated pressure sensing does for the end customer. Your riders get all the performance you designed in. You get a differentiation no one else has.</span>
     <span data-mode="developer" class="inline">Sensor hardware, firmware integration support, and analysis tools purpose-built for wing development. From material testing to final pressure specs — PressureWerx becomes part of your R&D.</span>
   </p>
+  <ul class="bullet-list" data-mode="rider">
+    <li>Bespoke sensor integration for your construction</li>
+    <li>Single or multi-sensor configurations</li>
+    <li>Rider and developer access to session data</li>
+    <li>Custom firmware for your use case</li>
+  </ul>
   <ul class="bullet-list" data-mode="developer">
     <li>Dev kit with multiple sensors</li>
     <li>API access to raw data</li>
@@ -621,6 +633,7 @@ const reveals=document.querySelectorAll('.reveal');
 const revealObs=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')})},{threshold:0.01});
 reveals.forEach(el=>revealObs.observe(el));
 document.querySelectorAll('#cover .reveal').forEach((el,i)=>{setTimeout(()=>el.classList.add('visible'),200+i*200)});
+setTimeout(()=>document.getElementById('scrollHint').classList.add('visible'),1400);
 
 let chartBStarted=false;
 const obsB=new IntersectionObserver(e=>{e.forEach(en=>{if(en.isIntersecting&&!chartBStarted){chartBStarted=true;runChartB()}})},{threshold:0.65});

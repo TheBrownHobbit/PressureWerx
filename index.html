@@ -116,6 +116,8 @@
   .sensor-card img{width:100%;height:100%;object-fit:cover;display:block}
   .sensor-card-overlay{position:absolute;bottom:0;left:0;right:0;padding:12px 14px;background:linear-gradient(transparent,rgba(10,10,10,.92))}
   .sensor-card-label{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;color:var(--white)}
+  .sensor-item{display:flex;flex-direction:column}
+  .sensor-footnote{margin-top:10px;font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:400;font-size:13px;letter-spacing:.5px;color:var(--grey-light);text-align:center}
 
   /* ── Section 5: Ecosystem two-column ── */
   .ecosystem-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;width:100%;margin-top:8px}
@@ -292,21 +294,33 @@
   <div class="section-rule reveal reveal-delay-1"></div>
   <h2 class="section-title reveal reveal-delay-2">Sensor integration,<br><em>your way.</em></h2>
   <div class="sensor-grid reveal reveal-delay-3">
-    <div class="sensor-card">
-      <img src="sensor-in-valve.jpg" alt="PressureWerx sensor threaded into an inflate valve cap">
-      <div class="sensor-card-overlay"><div class="sensor-card-label">In-Valve</div></div>
+    <div class="sensor-item">
+      <div class="sensor-card">
+        <img src="sensor-in-valve.jpg" alt="PressureWerx sensor threaded into an inflate valve cap">
+        <div class="sensor-card-overlay"><div class="sensor-card-label">In-Valve</div></div>
+      </div>
+      <div class="sensor-footnote">best of all worlds</div>
     </div>
-    <div class="sensor-card">
-      <img src="sensor-in-bladder.jpg" alt="PressureWerx sensor sealed inside the wing bladder, accessed through a zippered port">
-      <div class="sensor-card-overlay"><div class="sensor-card-label">In-Bladder</div></div>
+    <div class="sensor-item">
+      <div class="sensor-card">
+        <img src="sensor-in-bladder.jpg" alt="PressureWerx sensor sealed inside the wing bladder, accessed through a zippered port">
+        <div class="sensor-card-overlay"><div class="sensor-card-label">In-Bladder</div></div>
+      </div>
+      <div class="sensor-footnote">out of sight, out of mind</div>
     </div>
-    <div class="sensor-card">
-      <img src="sensor-inline-onepump.jpg" alt="PressureWerx sensor module built inline with a OnePump hose setup">
-      <div class="sensor-card-overlay"><div class="sensor-card-label">Inline with OnePump</div></div>
+    <div class="sensor-item">
+      <div class="sensor-card">
+        <img src="sensor-inline-onepump.jpg" alt="PressureWerx sensor module built inline with a OnePump hose setup">
+        <div class="sensor-card-overlay"><div class="sensor-card-label">In-Line</div></div>
+      </div>
+      <div class="sensor-footnote">concept, but possible</div>
     </div>
-    <div class="sensor-card">
-      <img src="sensor-pouch-pack.jpg" alt="PressureWerx sensor mounted in an external pouch pack">
-      <div class="sensor-card-overlay"><div class="sensor-card-label">Pouch Pack</div></div>
+    <div class="sensor-item">
+      <div class="sensor-card">
+        <img src="sensor-pouch-pack.jpg" alt="PressureWerx sensor mounted in an external pouch pack">
+        <div class="sensor-card-overlay"><div class="sensor-card-label">In-Pouch</div></div>
+      </div>
+      <div class="sensor-footnote">easiest install</div>
     </div>
   </div>
   <p class="section-subtitle reveal reveal-delay-3">

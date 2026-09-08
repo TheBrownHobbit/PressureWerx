@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PressureWerx — Scan to Continue</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;700;900&family=Barlow+Condensed:wght@300;400;700&display=swap">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--red:#E8291C;--black:#0a0a0a;--white:#fff;--grey-dark:#111;--grey-mid:#2a2a2a;--grey-light:#888;--grey-subtle:#444}
+  html,body{height:100%}
+  body{
+    background:var(--black);
+    color:var(--white);
+    font-family:'Barlow',sans-serif;
+    font-weight:300;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    overflow-x:hidden;
+    padding:calc(env(safe-area-inset-top) + 32px) 24px calc(env(safe-area-inset-bottom) + 24px);
+    text-align:center;
+  }
+  body::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:radial-gradient(ellipse at 50% 38%,#1c0b08 0%,#0a0a0a 65%);
+    pointer-events:none;
+  }
+
+  .logo-lockup{display:flex;align-items:center;gap:14px;position:relative;z-index:1}
+  .brand-name{font-weight:700;font-size:clamp(24px,7vw,32px);letter-spacing:-1px;color:var(--white);line-height:1;white-space:nowrap}
+
+  .divider{width:100%;max-width:280px;height:1px;background:var(--grey-mid);margin:22px 0 18px;position:relative;z-index:1}
+
+  .tagline{
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:300;
+    font-size:clamp(20px,6.5vw,26px);
+    line-height:1.35;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    color:var(--grey-light);
+    position:relative;
+    z-index:1;
+  }
+  .tagline em{font-style:normal;color:var(--red)}
+
+  .qr-card{
+    position:relative;
+    z-index:1;
+    margin-top:34px;
+    width:min(78vw,320px);
+    aspect-ratio:1/1;
+    background:var(--white);
+    border-radius:14px;
+    padding:20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 0 0 1px var(--grey-mid),0 20px 60px rgba(0,0,0,.5);
+  }
+  .qr-card svg{width:100%;height:100%;display:block}
+
+  .qr-caption{
+    position:relative;
+    z-index:1;
+    margin-top:22px;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:13px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--grey-light);
+  }
+  .qr-url{
+    position:relative;
+    z-index:1;
+    margin-top:8px;
+    font-size:13px;
+    color:var(--grey-subtle);
+    word-break:break-all;
+  }
+  .qr-url a{color:var(--grey-subtle);text-decoration:none;border-bottom:1px solid var(--grey-mid);padding-bottom:1px}
+
+  .red-bar{position:absolute;bottom:0;left:0;width:100%;height:4px;background:var(--red)}
+</style>
+</head>
+<body>
+  <div class="logo-lockup">
+    <svg width="48" height="48" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M 13.6 71 A 42 42 0 1 1 86.4 71" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="10" fill="#E8291C"/><polygon points="50,42 44,48 22,24" fill="#E8291C"/><polygon points="50,42 56,48 22,24" fill="#E8291C"/>
+    </svg>
+    <div class="brand-name">PressureWerx</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="tagline">Flying Blind<br><em>Ends Now.</em></div>
+
+  <a class="qr-card" href="https://thebrownhobbit.github.io/PressureWerx/" aria-label="Open the PressureWerx website">
+    <svg viewBox="0 0 45 45" shape-rendering="crispEdges" role="img" aria-label="QR code linking to the PressureWerx website"><path fill="#ffffff" d="M0 0h45v45H0z"/><path stroke="#000000" d="M2 2.5h7m1 0h2m1 0h1m2 0h1m2 0h3m4 0h1m2 0h1m1 0h1m1 0h1m2 0h7M2 3.5h1m5 0h1m2 0h3m2 0h2m1 0h5m2 0h2m1 0h2m1 0h3m1 0h1m5 0h1M2 4.5h1m1 0h3m1 0h1m2 0h1m3 0h1m6 0h1m1 0h1m6 0h4m1 0h1m1 0h3m1 0h1M2 5.5h1m1 0h3m1 0h1m1 0h4m2 0h2m3 0h1m1 0h1m3 0h1m1 0h1m1 0h3m2 0h1m1 0h3m1 0h1M2 6.5h1m1 0h3m1 0h1m3 0h3m6 0h1m2 0h1m4 0h1m2 0h2m2 0h1m1 0h3m1 0h1M2 7.5h1m5 0h1m2 0h1m1 0h1m1 0h2m2 0h1m5 0h3m1 0h5m2 0h1m5 0h1M2 8.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M16 9.5h1m1 0h2m2 0h2m2 0h6m2 0h1M4 10.5h1m1 0h3m1 0h1m1 0h1m3 0h2m1 0h5m1 0h1m1 0h1m2 0h2m1 0h1m1 0h1m3 0h1m2 0h1M2 11.5h5m2 0h1m3 0h1m2 0h1m2 0h1m1 0h1m1 0h2m5 0h2m2 0h1m1 0h1m2 0h4M5 12.5h7m1 0h3m1 0h1m6 0h2m2 0h1m1 0h2m3 0h1m2 0h1m1 0h1m1 0h1M6 13.5h1m4 0h2m1 0h3m3 0h1m5 0h3m2 0h2m1 0h4m3 0h1M6 14.5h1m1 0h1m1 0h2m1 0h1m3 0h3m1 0h5m2 0h1m1 0h2m1 0h1m1 0h1m3 0h1M3 15.5h1m1 0h1m8 0h2m2 0h1m2 0h5m1 0h5m1 0h1m1 0h1m4 0h3M3 16.5h2m1 0h1m1 0h1m1 0h3m2 0h1m2 0h1m4 0h1m5 0h2m5 0h1m4 0h2M3 17.5h1m6 0h1m2 0h1m7 0h3m1 0h4m1 0h4m2 0h2m3 0h2M5 18.5h2m1 0h1m6 0h2m1 0h2m2 0h1m3 0h1m2 0h3m4 0h2m3 0h1M2 19.5h4m1 0h1m2 0h3m3 0h1m2 0h1m1 0h8m1 0h3m1 0h1m1 0h1m2 0h4M2 20.5h1m2 0h2m1 0h6m3 0h2m5 0h2m1 0h2m3 0h1m3 0h1m1 0h5M3 21.5h1m1 0h1m3 0h4m1 0h2m3 0h3m3 0h1m1 0h1m2 0h3m2 0h3m4 0h1M4 22.5h1m2 0h2m1 0h2m1 0h3m2 0h1m2 0h5m2 0h1m3 0h1m1 0h5m2 0h2M2 23.5h2m2 0h1m2 0h3m2 0h2m1 0h2m1 0h1m1 0h1m1 0h1m3 0h1m1 0h1m1 0h1m2 0h3m2 0h3M3 24.5h1m1 0h1m2 0h1m1 0h6m1 0h3m2 0h2m6 0h1m1 0h1m1 0h1m1 0h4m1 0h2M2 25.5h2m1 0h2m2 0h1m2 0h1m1 0h1m1 0h2m1 0h1m1 0h5m1 0h3m1 0h1m1 0h5m1 0h1m1 0h2M3 26.5h3m2 0h1m1 0h2m4 0h1m1 0h1m1 0h3m2 0h1m1 0h1m1 0h1m1 0h1m2 0h5m1 0h2M2 27.5h2m1 0h1m4 0h1m2 0h3m5 0h1m2 0h2m1 0h1m2 0h1m4 0h2m5 0h1M2 28.5h2m4 0h2m4 0h2m5 0h4m3 0h1m1 0h1m1 0h1m3 0h2m2 0h3M4 29.5h2m1 0h1m2 0h1m2 0h6m1 0h2m1 0h5m3 0h2m1 0h1m3 0h1m2 0h2M2 30.5h1m1 0h1m1 0h5m3 0h5m1 0h2m2 0h1m1 0h2m3 0h1m1 0h2m1 0h1m2 0h1m2 0h1M3 31.5h2m6 0h3m2 0h1m1 0h4m2 0h1m2 0h1m1 0h1m1 0h4m4 0h4M2 32.5h1m1 0h1m3 0h2m1 0h2m1 0h1m2 0h1m1 0h2m2 0h3m1 0h1m3 0h4m2 0h1m2 0h1m1 0h1M3 33.5h4m4 0h2m1 0h1m1 0h3m2 0h1m1 0h4m1 0h2m1 0h1m2 0h3m1 0h1m2 0h2M2 34.5h1m1 0h1m2 0h3m3 0h5m2 0h1m3 0h1m1 0h2m3 0h1m1 0h6m3 0h1M10 35.5h1m2 0h1m1 0h2m1 0h2m2 0h3m4 0h2m3 0h1m3 0h1m1 0h1m1 0h1M2 36.5h7m4 0h3m3 0h2m2 0h1m1 0h1m2 0h1m2 0h1m1 0h2m1 0h1m1 0h2m1 0h2M2 37.5h1m5 0h1m1 0h2m2 0h1m1 0h3m1 0h1m2 0h1m2 0h1m2 0h2m3 0h1m3 0h2m2 0h1M2 38.5h1m1 0h3m1 0h1m1 0h1m1 0h8m1 0h1m1 0h3m1 0h2m1 0h1m3 0h5m2 0h1M2 39.5h1m1 0h3m1 0h1m2 0h2m1 0h2m2 0h1m2 0h1m2 0h3m1 0h1m1 0h2m3 0h1m2 0h1m1 0h3M2 40.5h1m1 0h3m1 0h1m1 0h4m1 0h2m1 0h1m7 0h1m1 0h1m1 0h1m2 0h2m2 0h2m3 0h1M2 41.5h1m5 0h1m5 0h1m4 0h2m1 0h1m4 0h6m1 0h4m2 0h2M2 42.5h7m2 0h1m1 0h1m1 0h1m1 0h3m2 0h3m2 0h2m1 0h2m1 0h6m1 0h3"/></svg>
+  </a>
+
+  <p class="qr-caption">Scan to continue</p>
+  <p class="qr-url"><a href="https://thebrownhobbit.github.io/PressureWerx/">thebrownhobbit.github.io/PressureWerx</a></p>
+
+  <div class="red-bar"></div>
+</body>
+</html>

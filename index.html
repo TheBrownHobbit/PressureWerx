@@ -74,7 +74,7 @@
   .avg-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--grey-light);margin-top:3px}
   .chart-outer{flex:1;position:relative;min-height:320px}
   canvas{display:block;width:100%!important;height:100%!important}
-  .rider-banner{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-family:'Barlow',sans-serif;font-weight:700;font-size:22px;letter-spacing:1px;text-transform:uppercase;padding:8px 24px;border-radius:4px;background:rgba(10,10,10,.8);opacity:0;transition:opacity .5s ease;pointer-events:none;white-space:normal;text-align:center;line-height:1.3}
+  .rider-banner{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-family:'Barlow',sans-serif;font-weight:700;font-size:22px;letter-spacing:1px;text-transform:uppercase;padding:6px 22px;border-radius:4px;background:rgba(10,10,10,.8);opacity:0;transition:opacity .5s ease;pointer-events:none;white-space:normal;text-align:center;line-height:1.25}
   .rider-banner.show{opacity:1}
   .chart-footer{display:flex;justify-content:space-between;padding-top:14px;border-top:1px solid var(--grey-mid);margin-top:14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--grey-subtle)}
 
@@ -109,8 +109,9 @@
 
   /* ── Section 4: Sensor integration grid ── */
   .sensor-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;width:100%;margin:32px 0}
-  .sensor-card{aspect-ratio:1/1;border-radius:8px;border:1px solid var(--grey-mid);background:linear-gradient(135deg,#111 0%,#1a1a1a 50%,#111 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:16px}
-  .sensor-card-icon{width:44px;height:44px;border:2px solid var(--grey-subtle);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;color:var(--grey-light)}
+  .sensor-card{position:relative;aspect-ratio:1/1;border-radius:8px;overflow:hidden;border:1px solid var(--grey-mid);background:var(--grey-dark)}
+  .sensor-card img{width:100%;height:100%;object-fit:cover;display:block}
+  .sensor-card-overlay{position:absolute;bottom:0;left:0;right:0;padding:12px 14px;background:linear-gradient(transparent,rgba(10,10,10,.92))}
   .sensor-card-label{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;color:var(--white)}
 
   /* ── Section 5: Ecosystem two-column ── */
@@ -137,11 +138,17 @@
   .bullet-list li::before{content:'';position:absolute;left:0;top:9px;width:8px;height:8px;background:var(--teal);border-radius:50%}
 
   /* ── Section 9: Spec sheet ── */
+  .specs-header{display:flex;align-items:flex-end;justify-content:flex-start;gap:40px;flex-wrap:wrap}
+  .specs-sensor-photo{width:110px;height:110px;object-fit:cover;border-radius:50%;border:3px solid var(--grey-mid);box-shadow:0 8px 24px rgba(0,0,0,.4)}
   .spec-table{width:100%;margin-top:32px;border-collapse:collapse;border:1px solid var(--grey-mid);border-radius:8px;overflow:hidden}
-  .spec-table th,.spec-table td{padding:16px 20px;text-align:left;border-bottom:1px solid var(--grey-mid);vertical-align:top}
-  .spec-table th{width:220px;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--red);background:var(--grey-dark)}
-  .spec-table td{color:var(--grey-light);font-size:15px;font-style:italic}
-  .spec-table tr:last-child th,.spec-table tr:last-child td{border-bottom:none}
+  .spec-table td{padding:12px 20px;text-align:left;border-bottom:1px solid var(--grey-mid);vertical-align:top;font-size:15px}
+  .spec-table tr.spec-group th{padding:12px 20px;text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--red);background:var(--grey-dark);border-bottom:1px solid var(--grey-mid)}
+  .spec-table tr.spec-group:not(:first-child) th{border-top:1px solid var(--grey-mid)}
+  .spec-group-note{color:var(--grey-subtle);text-transform:none;letter-spacing:0;font-weight:400;margin-left:6px}
+  .spec-table td.spec-label{width:280px;color:var(--grey-light)}
+  .spec-table td.spec-value{color:var(--white)}
+  .spec-table tr.spec-footnote td{color:var(--grey-subtle);font-size:12px;font-style:italic;padding-top:0;padding-bottom:14px}
+  .spec-table tr:last-child td{border-bottom:none}
 
   /* ── Mobile responsive ── */
   @media (max-width: 900px) {
@@ -169,7 +176,9 @@
     .ecosystem-images{grid-template-columns:1fr 1fr;gap:12px}
     .solution-overlay { padding: 8px 10px; }
     .solution-overlay-text { font-size: 11px; letter-spacing: 1px; }
-    .spec-table th{width:140px;font-size:11px}
+    .spec-table tr.spec-group th{font-size:11px}
+    .spec-table td.spec-label{width:150px;font-size:13px}
+    .spec-table td.spec-value{font-size:13px}
   }
 </style>
 </head>
@@ -211,12 +220,12 @@
   <div class="section-number reveal">The Problem</div>
   <div class="section-rule reveal reveal-delay-1"></div>
   <h2 class="section-title reveal reveal-delay-2">
-    <span data-mode="rider" class="inline">You know what you pumped to. You have no idea what happened next.</span>
-    <span data-mode="developer" class="inline">Your recommended pressures are a guess.</span>
+    <span data-mode="rider" class="inline">You know what you pumped to. You have no idea what it is now.</span>
+    <span data-mode="developer" class="inline">You're developing wings without your most fundamental variable.</span>
   </h2>
   <p class="section-subtitle reveal reveal-delay-3">
-    <span data-mode="rider" class="inline">Pressures shift with temperature, altitude, impacts, and time. Your wing is a different wing at the end of the session than it was at the start.</span>
-    <span data-mode="developer" class="inline">Different constructions, different materials, different environments — they all respond differently. Without continuous data, you're designing blind.</span>
+    <span data-mode="rider" class="inline">Materials stretch. Sun heats the air frame. Spray cools it down. Every gust, every crash, every minute on the water — your pressure is drifting. You've been flying a different wing since the moment you launched.</span>
+    <span data-mode="developer" class="inline">Pressure defines how your wing performs, how your materials behave, and where your designs fail. But today you set a number at the beach and hope it holds. It doesn't. Materials stretch, temperatures shift, conditions change. Every piece of rider feedback, every prototype comparison, every failure analysis — correlated to a number that no longer existed.</span>
   </p>
 </section>
 
@@ -279,20 +288,20 @@
   <h2 class="section-title reveal reveal-delay-2">Sensor integration,<br><em>your way.</em></h2>
   <div class="sensor-grid reveal reveal-delay-3">
     <div class="sensor-card">
-      <div class="sensor-card-icon">IV</div>
-      <div class="sensor-card-label">In-Valve</div>
+      <img src="sensor-in-valve.jpg" alt="PressureWerx sensor threaded into an inflate valve cap">
+      <div class="sensor-card-overlay"><div class="sensor-card-label">In-Valve</div></div>
     </div>
     <div class="sensor-card">
-      <div class="sensor-card-icon">IB</div>
-      <div class="sensor-card-label">In-Bladder</div>
+      <img src="sensor-in-bladder.jpg" alt="PressureWerx sensor sealed inside the wing bladder, accessed through a zippered port">
+      <div class="sensor-card-overlay"><div class="sensor-card-label">In-Bladder</div></div>
     </div>
     <div class="sensor-card">
-      <div class="sensor-card-icon">OP</div>
-      <div class="sensor-card-label">Inline with OnePump</div>
+      <img src="sensor-inline-onepump.jpg" alt="PressureWerx sensor module built inline with a OnePump hose setup">
+      <div class="sensor-card-overlay"><div class="sensor-card-label">Inline with OnePump</div></div>
     </div>
     <div class="sensor-card">
-      <div class="sensor-card-icon">PP</div>
-      <div class="sensor-card-label">Pouch Pack</div>
+      <img src="sensor-pouch-pack.jpg" alt="PressureWerx sensor mounted in an external pouch pack">
+      <div class="sensor-card-overlay"><div class="sensor-card-label">Pouch Pack</div></div>
     </div>
   </div>
   <p class="section-subtitle reveal reveal-delay-3">
@@ -386,15 +395,51 @@
 </section>
 
 <section class="section bg-alt" id="specs">
-  <div class="section-number reveal">Spec Sheet</div>
-  <div class="section-rule reveal reveal-delay-1"></div>
-  <h2 class="section-title reveal reveal-delay-2">The <em>numbers.</em></h2>
+  <div class="specs-header">
+    <div>
+      <div class="section-number reveal">Spec Sheet</div>
+      <div class="section-rule reveal reveal-delay-1"></div>
+      <h2 class="section-title reveal reveal-delay-2">The <em>numbers.</em></h2>
+    </div>
+    <div class="specs-sensor-figure reveal reveal-delay-2">
+      <img class="specs-sensor-photo" src="sensor-actual-size.jpg" alt="The PressureWerx sensor held between two fingers">
+    </div>
+  </div>
   <table class="spec-table reveal reveal-delay-3">
     <tbody>
-      <tr><th>Sensor</th><td>[PLACEHOLDER — range, accuracy, sample rates, battery, size/weight — TBD]</td></tr>
-      <tr><th>Radio</th><td>[PLACEHOLDER — BLE version, ANT+, dual transport, range — TBD]</td></tr>
-      <tr><th>Compatibility</th><td>[PLACEHOLDER — Garmin, Apple Watch, iPhone, wing types — TBD]</td></tr>
-      <tr><th>Environmental</th><td>[PLACEHOLDER — temp range, waterproof, altitude — TBD]</td></tr>
+      <tr class="spec-group"><th colspan="2">Physical <span class="spec-group-note">(sensor in small enclosure)</span></th></tr>
+      <tr><td class="spec-label">Diameter</td><td class="spec-value">25.6 mm</td></tr>
+      <tr><td class="spec-label">Thickness</td><td class="spec-value">8.2 mm</td></tr>
+      <tr><td class="spec-label">Weight</td><td class="spec-value">~7 g</td></tr>
+      <tr><td class="spec-label">Battery</td><td class="spec-value">CR2032 coin cell</td></tr>
+      <tr><td class="spec-label">Battery life</td><td class="spec-value">Target 3 years, regular use (use-case dependent)</td></tr>
+
+      <tr class="spec-group"><th colspan="2">Pressure Sensing</th></tr>
+      <tr><td class="spec-label">Low pressure mode</td><td class="spec-value">0–2 PSI gauge</td></tr>
+      <tr><td class="spec-label">Low pressure display resolution</td><td class="spec-value">0.001 PSI</td></tr>
+      <tr><td class="spec-label">Low pressure system accuracy</td><td class="spec-value">±0.015 PSI</td></tr>
+      <tr><td class="spec-label">High pressure mode</td><td class="spec-value">5–40 PSI gauge (lower ranges available on request)</td></tr>
+      <tr><td class="spec-label">High pressure display resolution</td><td class="spec-value">0.01 PSI</td></tr>
+      <tr><td class="spec-label">High pressure system accuracy</td><td class="spec-value">±0.05 PSI typical at 10 PSI</td></tr>
+      <tr><td class="spec-label">In-session trend precision</td><td class="spec-value">±0.0002 PSI (low mode) · ±0.005 PSI (high mode)</td></tr>
+      <tr class="spec-footnote"><td colspan="2">Gauge accuracy includes reference barometer contribution from paired device</td></tr>
+
+      <tr class="spec-group"><th colspan="2">Communication</th></tr>
+      <tr><td class="spec-label">Protocols</td><td class="spec-value">BLE 5.0 + ANT+ dual transport</td></tr>
+      <tr><td class="spec-label">Default update rate</td><td class="spec-value">1 Hz</td></tr>
+      <tr><td class="spec-label">Enhanced update rates</td><td class="spec-value">Available via iPhone / Apple Watch</td></tr>
+      <tr><td class="spec-label">Range</td><td class="spec-value">TBD</td></tr>
+
+      <tr class="spec-group"><th colspan="2">Compatibility</th></tr>
+      <tr><td class="spec-label">Apple Watch</td><td class="spec-value">Series 8 and later</td></tr>
+      <tr><td class="spec-label">iPhone</td><td class="spec-value">iPhone 13 and later</td></tr>
+      <tr><td class="spec-label">Garmin</td><td class="spec-value">Forerunner, Fenix, and Instinct models with barometer</td></tr>
+      <tr class="spec-footnote"><td colspan="2">Additional devices and platforms on the roadmap</td></tr>
+
+      <tr class="spec-group"><th colspan="2">Environmental</th></tr>
+      <tr><td class="spec-label">Operating conditions</td><td class="spec-value">Designed for wing foiling in all navigable water conditions</td></tr>
+      <tr><td class="spec-label">Water resistance</td><td class="spec-value">Target IPX7, dependent on configuration</td></tr>
+      <tr><td class="spec-label">Temperature range</td><td class="spec-value">TBC</td></tr>
     </tbody>
   </table>
 </section>
@@ -460,7 +505,7 @@ const minPSI=5.8,maxPSI=9.6;
 
 function makeChart(canvasId,outerId){
   const canvas=document.getElementById(canvasId),ctx=canvas.getContext('2d'),outer=document.getElementById(outerId);
-  let dpr=1;const M={top:20,right:24,bottom:44,left:56};
+  let dpr=1;const M={top:84,right:24,bottom:44,left:56};
   function cW(){return canvas.width/dpr-M.left-M.right}
   function cH(){return canvas.height/dpr-M.top-M.bottom}
   function xS(t){return M.left+(t/maxT)*cW()}
@@ -498,7 +543,7 @@ function makeChart(canvasId,outerId){
   function drawTrace(data,n,color,lw,shadow){if(n<2)return;ctx.save();ctx.beginPath();for(let i=0;i<n;i++){const x=xS(T[i]),y=yS(data[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)}ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.lineJoin='round';ctx.lineCap='round';if(shadow){ctx.shadowColor=color;ctx.shadowBlur=shadow}ctx.stroke();ctx.restore()}
   function drawHead(data,n,color){if(n<2||n>=N)return;const hx=xS(T[n-1]),hy=yS(data[n-1]);ctx.save();ctx.beginPath();ctx.arc(hx,hy,5,0,Math.PI*2);ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=18;ctx.fill();ctx.restore()}
   function drawFill(data,n){if(n<2)return;ctx.save();ctx.beginPath();ctx.moveTo(xS(T[0]),yS(data[0]));for(let i=1;i<n;i++)ctx.lineTo(xS(T[i]),yS(data[i]));ctx.lineTo(xS(T[n-1]),M.top+cH());ctx.lineTo(xS(T[0]),M.top+cH());ctx.closePath();const g=ctx.createLinearGradient(0,M.top,0,M.top+cH());g.addColorStop(0,'rgba(232,41,28,.18)');g.addColorStop(.6,'rgba(232,41,28,.04)');g.addColorStop(1,'rgba(232,41,28,0)');ctx.fillStyle=g;ctx.fill();ctx.restore()}
-  function drawLabel(text,color,alpha,labelY){if(!text||alpha<=0)return;const ly=yS(labelY),lx=outer.clientWidth/2;ctx.save();ctx.globalAlpha=alpha;ctx.font="bold 22px 'Barlow',sans-serif";ctx.textAlign='center';ctx.textBaseline='middle';const lines=wordWrap(ctx,text,cW()*.75);const lineH=32;const totalH=lines.length*lineH+20;const maxW=Math.max(...lines.map(l=>ctx.measureText(l).width));const pw=maxW+40;const boxTop=ly-totalH/2;ctx.fillStyle='rgba(10,10,10,.80)';ctx.beginPath();ctx.roundRect(lx-pw/2,boxTop,pw,totalH,4);ctx.fill();ctx.fillStyle=color;lines.forEach((line,i)=>{ctx.fillText(line,lx,boxTop+12+i*lineH+lineH/2)});ctx.restore()}
+  function drawLabel(text,color,alpha,labelY){if(!text||alpha<=0)return;const ly=yS(labelY),lx=outer.clientWidth/2;ctx.save();ctx.globalAlpha=alpha;ctx.font="bold 22px 'Barlow',sans-serif";ctx.textAlign='center';ctx.textBaseline='middle';const lines=wordWrap(ctx,text,cW()*.88);const lineH=32;const totalH=lines.length*lineH+20;const maxW=Math.max(...lines.map(l=>ctx.measureText(l).width));const pw=maxW+40;const boxTop=ly-totalH/2;ctx.fillStyle='rgba(10,10,10,.80)';ctx.beginPath();ctx.roundRect(lx-pw/2,boxTop,pw,totalH,4);ctx.fill();ctx.fillStyle=color;lines.forEach((line,i)=>{ctx.fillText(line,lx,boxTop+12+i*lineH+lineH/2)});ctx.restore()}
   function drawAvg(psi,color){const x1=xS(16),x2=xS(110),y=yS(psi);ctx.save();ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=1;ctx.globalAlpha=.35;ctx.setLineDash([4,4]);ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke();ctx.restore()}
   return{canvas,ctx,resize,drawBase,drawAxes,drawTrace,drawHead,drawFill,drawLabel,drawAvg,cW,cH,xS,yS};
 }

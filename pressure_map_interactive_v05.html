@@ -303,7 +303,8 @@ body {
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-#vis .v-header .v-logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+#vis .v-header .v-logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-decoration: none; color: inherit; transition: opacity .15s ease; }
+#vis .v-header .v-logo:hover { opacity: .8; }
 #vis .v-header .v-logo span {
   font-weight: 700; font-size: 15px; letter-spacing: -0.3px;
   color: var(--brand-ink);
@@ -669,7 +670,7 @@ body {
   <div class="container">
 
     <div class="v-header">
-      <div class="v-logo">
+      <a class="v-logo" href="index.html" aria-label="Back to PressureWerx home">
         <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M 13.6 71 A 42 42 0 1 1 86.4 71" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round"/>
           <circle cx="50" cy="50" r="10" fill="#E8291C"/>
@@ -677,7 +678,7 @@ body {
           <polygon points="50,42 56,48 22,24" fill="#E8291C"/>
         </svg>
         <span>PressureWerx</span>
-      </div>
+      </a>
       <div class="meta-strip">
         <span class="meta-sm-hide">File <strong id="metaFile">—</strong></span>
         <span>Date <strong id="metaDate">—</strong></span>

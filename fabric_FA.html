@@ -3620,7 +3620,9 @@ body[data-not-sent] > #vis-container ~ #not-sent {
         : [[0, fab.color], [1, fab.color]],
       opacity: SLOT_STYLE[fab.slot].opacity, showscale: false,
       contours: { z: { show: true, usecolormap: false, project: { z: false }, color: fab.darkContour, width: 1 } },
-      hovertemplate: fab.label + '<br>' + seamTypes[fab.seam].title + '<br>Age: %{x:.1f}<br>Temp: %{y:.0f}°C<br>Burst: %{z:.1f} PSI<extra></extra>',
+      // No tooltip on the surface itself (data readout is on the sun lines), but 'none' rather than
+      // 'skip' keeps it pickable so it still blocks the back-wall hotspots behind it.
+      hoverinfo: 'none',
       name: fab.label
     };
   }
@@ -3680,7 +3682,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     return {
       type: 'scatter3d', mode: 'lines', x: x, y: y, z: z,
       line: { color: line.lineColor, width: 9 },
-      hovertemplate: fab.label + ' — ' + line.name + ' (Sun Temp ' + line.T + '°C)<br>Age: %{x:.1f}<br>Burst: %{z:.1f} PSI<extra></extra>',
+      hovertemplate: fab.label + ' — ' + line.name + ' (Sun Temp ' + line.T + '°C)<br>' + seamTypes[fab.seam].title + '<br>Age: %{x:.1f}<br>Burst: %{z:.1f} PSI<extra></extra>',
       showlegend: false, name: fab.name + ' ' + line.name
     };
   }
@@ -3839,12 +3841,18 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       const gd = document.getElementById('plot3d');
       const scene = gd._fullLayout.scene && gd._fullLayout.scene._scene;
       if (!scene || !scene.traces || !scene.glplot) return;
+      // Plotly reuses GL objects across renders (traces are matched by position), so an object
+      // silenced for a 'skip' trace can later belong to a hoverable sun line. Always restore the
+      // original drawPick for non-skip traces, or those lines silently stop being pickable.
       for (const fd of gd._fullData) {
-        if (fd.hoverinfo !== 'skip') continue;
         const tr = scene.traces[fd.uid];
         if (!tr) continue;
+        const skip = fd.hoverinfo === 'skip';
         for (const k of PICK_OBJECT_KEYS) {
-          if (tr[k] && typeof tr[k].drawPick === 'function') tr[k].drawPick = () => {};
+          const obj = tr[k];
+          if (!obj || typeof obj.drawPick !== 'function') continue;
+          if (!obj._pwOrigDrawPick) obj._pwOrigDrawPick = obj.drawPick;
+          obj.drawPick = skip ? () => {} : obj._pwOrigDrawPick;
         }
       }
       scene.glplot.update();

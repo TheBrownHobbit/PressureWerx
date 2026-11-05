@@ -3421,23 +3421,23 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   <div class="fabric-grid" id="fabric-grid">
     <div class="fabric-card active" data-fabric="dacron">
       <button class="fabric-toggle"><span class="fabric-dot" style="background:#6250d6;"></span>Dacron</button>
-      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="15" data-burst="dacron"> PSI</div>
+      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="12" data-burst="dacron"> PSI</div>
     </div>
     <div class="fabric-card" data-fabric="exope">
       <button class="fabric-toggle"><span class="fabric-dot" style="background:#2a78d6;"></span>EXO-PE 85</button>
-      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="22" data-burst="exope"> PSI</div>
+      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="20" data-burst="exope"> PSI</div>
     </div>
     <div class="fabric-card" data-fabric="nweave">
       <button class="fabric-toggle"><span class="fabric-dot" style="background:#1baf7a;"></span>N-Weave 45</button>
       <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="20" data-burst="nweave"> PSI</div>
     </div>
     <div class="fabric-card" data-fabric="dyneema">
-      <button class="fabric-toggle"><span class="fabric-dot" style="background:#d03b3b;"></span>Dyneema laminate</button>
+      <button class="fabric-toggle"><span class="fabric-dot" style="background:#14b8d4;"></span>Dyneema laminate</button>
       <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="20" data-burst="dyneema"> PSI</div>
     </div>
     <div class="fabric-card" data-fabric="aluula">
-      <button class="fabric-toggle"><span class="fabric-dot" style="background:#eb6834;"></span>Aluula</button>
-      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="23" data-burst="aluula"> PSI</div>
+      <button class="fabric-toggle"><span class="fabric-dot" style="background:#f0c020;"></span>Aluula</button>
+      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="22" data-burst="aluula"> PSI</div>
     </div>
   </div>
 
@@ -3453,6 +3453,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     <div class="legend-item" data-line="black"><span class="legend-swatch" style="background:#0a0a0a; border: 1px solid #555;"></span>Black 85 °C</div>
     <div class="legend-item" data-line="opplane"><span class="legend-swatch" style="background:#8a8a8a; height:8px;"></span>Operating pressure</div>
     <div class="legend-item hidden" data-line="boundary"><span class="legend-swatch dashed"></span>Failure boundary</div>
+    <div class="legend-item hidden" data-line="failzone"><span class="legend-swatch" style="background:rgba(232,41,28,0.7); height:8px;"></span>Below operating pressure</div>
   </div>
 
   <div class="below-plot">
@@ -3480,7 +3481,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       name: 'Dacron', color: '#6250d6', darkContour: 'rgba(60,40,140,0.6)',
       tempFactor: T => 1 / (1 + Math.exp((T - 180) / 40)),
       thermalMult: T => 1 + (T - 25) / 90,
-      kBase: 0.025, baseBurst: 15,
+      kBase: 0.025, baseBurst: 12,
       sunLines: [
         { name: 'White', T: 52, lineColor: '#0ca30c', key: 'white' },
         { name: 'Grey',  T: 65, lineColor: '#444441', key: 'grey65' },
@@ -3491,7 +3492,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       name: 'EXO-PE 85', color: '#2a78d6', darkContour: 'rgba(20,70,160,0.6)',
       tempFactor: T => 1 / (1 + Math.exp((T - 110) / 22)),
       thermalMult: T => 1 + (T - 25) / 50,
-      kBase: 0.028, baseBurst: 22,
+      kBase: 0.028, baseBurst: 20,
       sunLines: [
         { name: 'White', T: 52, lineColor: '#0ca30c', key: 'white' },
         { name: 'Black', T: 85, lineColor: '#0a0a0a', key: 'black' }
@@ -3505,17 +3506,17 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       sunLines: [{ name: 'Silver', T: 60, lineColor: '#666664', key: 'silver60' }]
     },
     dyneema: {
-      name: 'Dyneema laminate', color: '#d03b3b', darkContour: 'rgba(120,20,20,0.6)',
+      name: 'Dyneema laminate', color: '#14b8d4', darkContour: 'rgba(5,95,115,0.6)',
       tempFactor: T => 1 / (1 + Math.exp((T - 100) / 20)),
       thermalMult: T => 1 + (T - 25) / 35,
       kBase: 0.050, baseBurst: 20,
       sunLines: [{ name: 'Grey-black', T: 75, lineColor: '#2c2c2a', key: 'greyblack' }]
     },
     aluula: {
-      name: 'Aluula', color: '#eb6834', darkContour: 'rgba(140,50,20,0.6)',
+      name: 'Aluula', color: '#f0c020', darkContour: 'rgba(130,95,0,0.6)',
       tempFactor: T => 1 / (1 + Math.exp((T - 110) / 22)),
       thermalMult: T => 1 + (T - 25) / 50,
-      kBase: 0.022, baseBurst: 23,
+      kBase: 0.022, baseBurst: 22,
       sunLines: [{ name: 'Gold', T: 68, lineColor: '#c48500', key: 'gold' }]
     }
   };
@@ -3526,11 +3527,21 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   const ages = Array.from({length: ageSteps}, (_, i) => i * 3 / (ageSteps - 1));
   const temps = Array.from({length: tempSteps}, (_, j) => 25 + j * (110 - 25) / (tempSteps - 1));
 
+  const FAIL_RED = '#E8291C';
+  // PSI either side of the operating pressure. Must cover the largest burst/operating gap (40 PSI max
+  // New Burst vs 0 PSI slider); kept tight because a narrower range gives a crisper red edge.
+  const FAIL_SPAN = 42;
+
   function mkSurface(fab) {
     const z = temps.map(T => ages.map(A => burstAt(fab, A, T)));
+    // Colour by burst value with a hard step at the operating pressure: anything below the operating
+    // plane renders FAIL_RED. The colour range is centred on the operating pressure so the step sits at
+    // 0.5, and the GPU interpolates per-pixel, so the red edge follows the true intersection curve.
     return {
       type: 'surface', x: ages, y: temps, z: z,
-      colorscale: [[0, fab.color], [1, fab.color]],
+      surfacecolor: z,
+      cmin: operatingPressure - FAIL_SPAN, cmax: operatingPressure + FAIL_SPAN,
+      colorscale: [[0, FAIL_RED], [0.5, FAIL_RED], [0.5, fab.color], [1, fab.color]],
       opacity: 0.45, showscale: false,
       contours: { z: { show: true, usecolormap: false, project: { z: false }, color: fab.darkContour, width: 1 } },
       hovertemplate: fab.name + '<br>Age: %{x:.1f}<br>Temp: %{y:.0f}°C<br>Burst: %{z:.1f} PSI<extra></extra>',
@@ -3539,15 +3550,16 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   }
 
   // Dark grey outline where a surface meets the two back walls (Seasons = 0 and Temp = 25 °C).
-  function mkBackWallEdges(fab) {
+  // wall: 'temp' = Seasons 0 wall (burst vs temperature), 'seasons' = 25 °C wall (burst vs age).
+  // focused: drawn in the fabric's own colour while that wall is hovered (see wallFocus).
+  function mkBackWallEdge(fab, wall, focused) {
     const x = [], y = [], z = [];
-    for (const T of temps) { x.push(0); y.push(T); z.push(burstAt(fab, 0, T)); }
-    x.push(null); y.push(null); z.push(null);
-    for (const A of ages) { x.push(A); y.push(25); z.push(burstAt(fab, A, 25)); }
+    if (wall === 'temp') { for (const T of temps) { x.push(0); y.push(T); z.push(burstAt(fab, 0, T)); } }
+    else { for (const A of ages) { x.push(A); y.push(25); z.push(burstAt(fab, A, 25)); } }
     return {
       type: 'scatter3d', mode: 'lines', x: x, y: y, z: z,
-      line: { color: '#5c5c5c', width: 5 },
-      hoverinfo: 'skip', showlegend: false, name: fab.name + ' back-wall edge'
+      line: focused ? { color: fab.color, width: 8 } : { color: '#5c5c5c', width: 5 },
+      hoverinfo: 'skip', showlegend: false, name: fab.name + ' ' + wall + '-wall edge'
     };
   }
 
@@ -3605,6 +3617,27 @@ body[data-not-sent] > #vis-container ~ #not-sent {
 
   let operatingPressure = 8;
   let showBoundary = true;
+  // Invisible hover hotspots on the two back walls of the box, each with an explanatory popup.
+  const WALL_HOVERLABEL = {
+    bgcolor: '#0a0a0a', bordercolor: '#E8291C',
+    font: { family: 'Barlow', size: 14, color: '#ffffff' }
+  };
+  const mkWall = (x, y, z, text, name, wall) => ({
+    type: 'mesh3d', x, y, z, meta: { wallHotspot: wall },
+    i: [0, 0], j: [1, 2], k: [2, 3],
+    color: '#ffffff', opacity: 0.01, flatshading: true,
+    hovertemplate: text + '<extra></extra>', hoverlabel: WALL_HOVERLABEL,
+    showlegend: false, name
+  });
+  const mkWallHotspots = () => [
+    // Temperature vs Burst wall (Seasons = 0)
+    mkWall([0, 0, 0, 0], [25, 110, 110, 25], [0, 0, 25, 25],
+      'Fabrics respond differently when heated in the sun.', 'Temperature wall', 'temp'),
+    // Seasons vs Burst wall (Temp = 25 °C)
+    mkWall([0, 3, 3, 0], [25, 25, 25, 25], [0, 0, 25, 25],
+      'Fabrics age differently over time.', 'Seasons wall', 'seasons')
+  ];
+
   const mkDangerPlane = () => ({
     type: 'mesh3d',
     x: [0, 3, 3, 0], y: [25, 25, 110, 110],
@@ -3659,6 +3692,12 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     document.querySelectorAll('.legend-item').forEach(el => {
       const k = el.dataset.line;
       if (k === 'opplane') { el.classList.remove('hidden'); return; }
+      if (k === 'failzone') {
+        // Only when some selected surface actually dips below the operating plane (i.e. red is on screen).
+        const anyRed = [...selected].some(key => temps.some(T => ages.some(A => burstAt(fabrics[key], A, T) < operatingPressure)));
+        el.classList.toggle('hidden', !anyRed);
+        return;
+      }
       if (k === 'boundary') {
         if (showBoundary && selected.size > 0) el.classList.remove('hidden');
         else el.classList.add('hidden');
@@ -3669,16 +3708,30 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     });
   }
 
+  // Set while the mouse is over a back-wall hotspot ('temp' | 'seasons'): everything except that
+  // wall's outlines is hidden so the fabrics can be compared on that single plane.
+  let wallFocus = null;
+
+  // Focus mode keeps the exact same trace list and only toggles visibility: swapping traces in and out
+  // while Plotly is mid-hover crashes its 3D render loop (TypeError setting 'axes'), killing hover.
   function render() {
-    const traces = [mkDangerPlane()];
+    const traces = [...mkWallHotspots(), mkDangerPlane()];
     for (const key of selected) {
       const fab = fabrics[key];
       traces.push(mkSurface(fab));
-      traces.push(mkBackWallEdges(fab));
+      traces.push(mkBackWallEdge(fab, 'temp', wallFocus === 'temp'));
+      traces.push(mkBackWallEdge(fab, 'seasons', wallFocus === 'seasons'));
       for (const line of fab.sunLines) traces.push(mkSunLine(fab, line));
       if (showBoundary) {
         const boundary = mkIntersectionLine(fab, operatingPressure);
         if (boundary) traces.push(boundary);
+      }
+    }
+    if (wallFocus) {
+      const keepEdge = ' ' + wallFocus + '-wall edge';
+      for (const t of traces) {
+        const isWall = t.meta && t.meta.wallHotspot;
+        if (!isWall && !t.name.endsWith(keepEdge)) t.visible = false;
       }
     }
     Plotly.react('plot3d', traces, layout, config);
@@ -3686,6 +3739,35 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   }
 
   render();
+
+  {
+    const plotEl = document.getElementById('plot3d');
+    // Entering focus waits WALL_FOCUS_DELAY ms so a cursor just passing over a wall doesn't blank the
+    // graph; leaving restores it immediately. All redraws are deferred so they never run inside
+    // Plotly's own hover dispatch.
+    const WALL_FOCUS_DELAY = 400;
+    let pendingWall = null, pendingTimer = null;
+    const cancelPending = () => { clearTimeout(pendingTimer); pendingTimer = null; pendingWall = null; };
+    const applyFocus = (w) => {
+      if (w === wallFocus) return;
+      wallFocus = w;
+      setTimeout(render, 0);
+    };
+    const onWall = (w) => {
+      if (w === wallFocus) { cancelPending(); return; }
+      if (w === pendingWall) return; // already counting down for this wall
+      cancelPending();
+      pendingWall = w;
+      pendingTimer = setTimeout(() => { pendingTimer = null; pendingWall = null; applyFocus(w); }, WALL_FOCUS_DELAY);
+    };
+    const offWall = () => { cancelPending(); applyFocus(null); };
+    plotEl.on('plotly_hover', (e) => {
+      const pt = e && e.points && e.points[0];
+      const w = pt && pt.data.meta && pt.data.meta.wallHotspot;
+      if (w) onWall(w); else offWall();
+    });
+    plotEl.on('plotly_unhover', offWall);
+  }
 
   // --- Camera controller: horizontal drag spins (azimuth), vertical drag tilts (elevation).
   //     No zoom: the mouse wheel is left alone so it scrolls the page.

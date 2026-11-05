@@ -3895,12 +3895,17 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       if (!r.width || !r.height) return INITIAL_DIST;
       return INITIAL_DIST * Math.max(1, FIT_RATIO * r.height / r.width);
     };
+    // Zoom is a multiplier on the fitted camera distance (<1 = closer). Pinch on touch; trackpad pinch
+    // or Ctrl/Cmd+wheel on desktop. A plain wheel still scrolls the page.
+    const ZOOM_MIN = 0.6, ZOOM_MAX = 1.5;
+    let zoom = 1;
+    const setZoom = (z) => { zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)); };
     let rafPending = false;
     const DEG_PER_PX = 0.35 * Math.PI / 180;
 
     function applyCamera() {
       rafPending = false;
-      const dist = fitDist();
+      const dist = fitDist() * zoom;
       const h = dist * Math.cos(elev);
       const eye = { x: h * Math.cos(az), y: h * Math.sin(az), z: dist * Math.sin(elev) };
       // Aim lower as the view tilts up so the front-edge labels stay inside the plot box.
@@ -3924,15 +3929,30 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     }).observe(plotEl);
 
     let dragX = null, dragY = null;
-    plotEl.style.touchAction = 'none'; // drag in both directions pivots the view
+    plotEl.style.touchAction = 'none'; // drag in both directions pivots the view; two fingers pinch-zoom
     plotEl.style.cursor = 'grab';
+    // Active touch points, for pinch-zoom. While two fingers are down, rotation is suspended.
+    const touches = new Map();
+    let pinch = null; // { startGap, startZoom }
+    const touchGap = () => { const [a, b] = [...touches.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
     plotEl.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
+      if (e.pointerType === 'touch') {
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (touches.size === 2) { pinch = { startGap: touchGap(), startZoom: zoom }; dragX = dragY = null; return; }
+        if (touches.size > 2) return;
+      }
       dragX = e.clientX; dragY = e.clientY;
       try { plotEl.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone; drag still works */ }
       plotEl.style.cursor = 'grabbing';
     });
     plotEl.addEventListener('pointermove', (e) => {
+      if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && touches.size >= 2) {
+        const gap = touchGap();
+        if (gap > 0) { setZoom(pinch.startZoom * pinch.startGap / gap); schedule(); } // fingers apart = closer
+        return;
+      }
       if (dragX === null) return;
       const dx = e.clientX - dragX, dy = e.clientY - dragY;
       dragX = e.clientX; dragY = e.clientY;
@@ -3940,12 +3960,23 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       elev = Math.min(ELEV_MAX, Math.max(ELEV_MIN, elev + dy * DEG_PER_PX));
       schedule();
     });
-    const endDrag = () => { dragX = null; dragY = null; plotEl.style.cursor = 'grab'; };
+    const endDrag = (e) => {
+      touches.delete(e.pointerId);
+      if (touches.size < 2) pinch = null;
+      dragX = null; dragY = null; plotEl.style.cursor = 'grab';
+    };
     plotEl.addEventListener('pointerup', endDrag);
     plotEl.addEventListener('pointercancel', endDrag);
     // Plotly's 3D canvas preventDefault()s every wheel event even with scrollZoom:false, which blocks
     // page scrolling over the graph. Stop the event in the capture phase before it reaches the canvas.
     plotEl.addEventListener('wheel', (e) => e.stopPropagation(), { capture: true, passive: true });
+    // Trackpad pinch arrives as a wheel event with ctrlKey set; Ctrl/Cmd+wheel behaves the same.
+    plotEl.addEventListener('wheel', (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return; // plain wheel: let the page scroll
+      e.preventDefault(); // stop browser page-zoom
+      setZoom(zoom * Math.exp(e.deltaY * 0.0025)); // ~25% per mouse-wheel notch, smooth on trackpads
+      schedule();
+    }, { capture: true, passive: false });
   }
 
   document.querySelectorAll('.fabric-card').forEach(card => {

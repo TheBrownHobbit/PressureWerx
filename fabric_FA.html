@@ -3378,6 +3378,13 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   .pw .fabric-card.active .burst-input-row { display: flex; }
   .pw .burst-input-row input { width: 58px; padding: 5px 7px; font-size: 13px; text-align: right; font-family: 'Barlow', sans-serif; font-weight: 700; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 3px; }
   .pw .plot-container { width: 100%; height: 440px; border: 1px solid #2a2a2a; border-radius: 4px; background: #ffffff; overflow: hidden; margin-top: 4px; }
+  @media (max-width: 600px) {
+    .pw .plot-container { height: 320px; }
+    /* Slider drops to its own full-width line so the PSI readout isn't pushed off the edge. */
+    .pw .op-pressure-row { flex-wrap: wrap; row-gap: 10px; }
+    .pw .op-pressure-row label { flex: 1; }
+    .pw .op-pressure-row input[type="range"] { order: 3; flex-basis: 100%; }
+  }
   .pw .below-plot { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
   .pw .op-pressure-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: #111; border: 1px solid #2a2a2a; border-radius: 4px; }
   .pw .op-pressure-row label { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: #ddd; white-space: nowrap; font-weight: 700; }
@@ -3714,6 +3721,25 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     showlegend: false
   };
 
+  // Narrow (phone) plots: smaller axis text and fewer ticks so labels don't collide.
+  const NARROW_PLOT_PX = 500;
+  const WIDE_TEMP_TICKS = [40, 50, 60, 70, 80, 90, 100, 110];
+  let narrowAxes = null;
+  // Returns true if the axis styling changed (caller should re-render).
+  function tuneAxesForWidth() {
+    const w = document.getElementById('plot3d').getBoundingClientRect().width;
+    const narrow = w > 0 && w < NARROW_PLOT_PX;
+    if (narrow === narrowAxes) return false;
+    narrowAxes = narrow;
+    for (const ax of ['xaxis', 'yaxis', 'zaxis']) {
+      layout.scene[ax].tickfont.size = narrow ? 11 : 16;
+      layout.scene[ax].title.font.size = narrow ? 13 : 20;
+    }
+    layout.scene.yaxis.tickvals = narrow ? [40, 60, 80, 100] : WIDE_TEMP_TICKS;
+    if (narrow) layout.scene.xaxis.tickvals = [0, 1, 2, 3]; else delete layout.scene.xaxis.tickvals;
+    return true;
+  }
+
   const config = { responsive: true, displayModeBar: false, scrollZoom: false, doubleClick: false };
   const selected = new Set(['dyneema']);
 
@@ -3741,6 +3767,29 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     });
   }
 
+  // Traces with hoverinfo:'skip' (operating plane, edge/boundary lines, wall frame) still block mouse
+  // picking in Plotly's 3D renderer, so a surface behind the operating plane couldn't be hovered.
+  // Plotly has no option for this, so after each render we stop those traces drawing into the pick
+  // buffer and mark it dirty via glplot.update() (glplot.redraw() does NOT refresh picking).
+  // Relies on Plotly 2.27 internals; guarded so a library change just falls back to default picking.
+  const PICK_OBJECT_KEYS = ['mesh', 'surface', 'linePlot', 'scatterPlot', 'errorBars', 'textMarkers', 'delaunayMesh'];
+  function makeSkipTracesUnpickable() {
+    try {
+      const gd = document.getElementById('plot3d');
+      const scene = gd._fullLayout.scene && gd._fullLayout.scene._scene;
+      if (!scene || !scene.traces || !scene.glplot) return;
+      for (const fd of gd._fullData) {
+        if (fd.hoverinfo !== 'skip') continue;
+        const tr = scene.traces[fd.uid];
+        if (!tr) continue;
+        for (const k of PICK_OBJECT_KEYS) {
+          if (tr[k] && typeof tr[k].drawPick === 'function') tr[k].drawPick = () => {};
+        }
+      }
+      scene.glplot.update();
+    } catch (err) { /* leave default picking in place */ }
+  }
+
   // Set while the mouse is over a back-wall hotspot ('temp' | 'seasons'): everything except that
   // wall's outlines is hidden so the fabrics can be compared on that single plane.
   let wallFocus = null;
@@ -3748,6 +3797,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   // Focus mode keeps the exact same trace list and only toggles visibility: swapping traces in and out
   // while Plotly is mid-hover crashes its 3D render loop (TypeError setting 'axes'), killing hover.
   function render() {
+    tuneAxesForWidth();
     const traces = [...mkWallHotspots(), mkDangerPlane(), mkWallOpLine('temp'), mkWallOpLine('seasons'), mkWallBorder('temp'), mkWallBorder('seasons')];
     for (const key of selected) {
       const fab = fabrics[key];
@@ -3766,7 +3816,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
         if (!keep) t.visible = false;
       }
     }
-    Plotly.react('plot3d', traces, layout, config);
+    Plotly.react('plot3d', traces, layout, config).then(makeSkipTracesUnpickable);
     updateLegend();
   }
 
@@ -3793,12 +3843,40 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       pendingTimer = setTimeout(() => { pendingTimer = null; pendingWall = null; applyFocus(w); }, WALL_FOCUS_DELAY);
     };
     const offWall = () => { cancelPending(); applyFocus(null); };
+
+    // Touch: there is no hover, and Plotly clears its tap "hover" almost immediately, which cancelled
+    // the dwell timer. So on touch a tap on a wall focuses it at once and holds; tapping anywhere
+    // else (a surface or empty space) returns to the full view.
+    let lastPointerType = 'mouse';
+    let tapStart = null, lastHoverAt = 0;
+    plotEl.addEventListener('pointerdown', (e) => {
+      lastPointerType = e.pointerType;
+      tapStart = { x: e.clientX, y: e.clientY };
+    }, true);
+    // Mouse hover (no button) also updates this, so hybrid touch/mouse devices switch back cleanly.
+    plotEl.addEventListener('pointermove', (e) => { lastPointerType = e.pointerType; }, true);
+    plotEl.addEventListener('pointerup', (e) => {
+      if (e.pointerType !== 'touch' || !tapStart) return;
+      const moved = Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y);
+      tapStart = null;
+      if (moved > 8) return; // that was a drag, not a tap
+      const tapAt = performance.now();
+      // If Plotly reports nothing under the tap, treat it as a tap on empty space.
+      setTimeout(() => { if (lastHoverAt < tapAt) applyFocus(null); }, 300);
+    }, true);
+
     plotEl.on('plotly_hover', (e) => {
       const pt = e && e.points && e.points[0];
       const w = pt && pt.data.meta && pt.data.meta.wallHotspot;
+      if (lastPointerType === 'touch') {
+        lastHoverAt = performance.now();
+        cancelPending();
+        applyFocus(w || null);
+        return;
+      }
       if (w) onWall(w); else offWall();
     });
-    plotEl.on('plotly_unhover', offWall);
+    plotEl.on('plotly_unhover', () => { if (lastPointerType !== 'touch') offWall(); });
   }
 
   // --- Camera controller: horizontal drag spins (azimuth), vertical drag tilts (elevation).
@@ -3807,22 +3885,43 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   {
     const plotEl = document.getElementById('plot3d');
     let az = Math.atan2(INITIAL_EYE.y, INITIAL_EYE.x);
-    const dist = INITIAL_DIST;
     let elev = INITIAL_ELEVATION;
+    // Plotly sizes the 3D scene to the plot's height, so on narrow (portrait/phone) plots the box
+    // overflows the sides. Back the camera off in proportion to how narrow the plot is; wide
+    // desktop plots stay at the default distance.
+    const FIT_RATIO = 1.4;
+    const fitDist = () => {
+      const r = plotEl.getBoundingClientRect();
+      if (!r.width || !r.height) return INITIAL_DIST;
+      return INITIAL_DIST * Math.max(1, FIT_RATIO * r.height / r.width);
+    };
     let rafPending = false;
     const DEG_PER_PX = 0.35 * Math.PI / 180;
 
     function applyCamera() {
       rafPending = false;
+      const dist = fitDist();
       const h = dist * Math.cos(elev);
       const eye = { x: h * Math.cos(az), y: h * Math.sin(az), z: dist * Math.sin(elev) };
       // Aim lower as the view tilts up so the front-edge labels stay inside the plot box.
-      const center = { x: 0, y: 0, z: -0.22 - 0.13 * (elev - INITIAL_ELEVATION) / (ELEV_MAX - INITIAL_ELEVATION) };
+      // On narrow plots, also slide the scene right on screen so the burst-axis title isn't clipped
+      // (look-at point moves toward screen-left, which depends on the current azimuth).
+      const shift = narrowAxes ? 0.07 : 0;
+      const center = {
+        x: shift * Math.sin(az), y: -shift * Math.cos(az),
+        z: -0.22 - 0.13 * (elev - INITIAL_ELEVATION) / (ELEV_MAX - INITIAL_ELEVATION)
+      };
       layout.scene.camera.eye = eye; // keep render()/Plotly.react in sync with the current view
       layout.scene.camera.center = center;
       Plotly.relayout(plotEl, { 'scene.camera.eye': eye, 'scene.camera.center': center });
     }
     const schedule = () => { if (!rafPending) { rafPending = true; requestAnimationFrame(applyCamera); } };
+    // Re-fit on load and whenever the plot changes size (window resize, phone rotation).
+    new ResizeObserver(() => {
+      Plotly.Plots.resize(plotEl); // container can change size without a window resize event
+      if (tuneAxesForWidth()) render();
+      schedule();
+    }).observe(plotEl);
 
     let dragX = null, dragY = null;
     plotEl.style.touchAction = 'none'; // drag in both directions pivots the view
@@ -3830,7 +3929,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     plotEl.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       dragX = e.clientX; dragY = e.clientY;
-      plotEl.setPointerCapture(e.pointerId);
+      try { plotEl.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone; drag still works */ }
       plotEl.style.cursor = 'grabbing';
     });
     plotEl.addEventListener('pointermove', (e) => {

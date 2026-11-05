@@ -3419,9 +3419,9 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   <!-- Hidden for now: <div class="section-h">Residual burst vs <em>age</em> and <em>temperature</em></div> -->
 
   <div class="fabric-grid" id="fabric-grid">
-    <div class="fabric-card active" data-fabric="dacron">
-      <button class="fabric-toggle"><span class="fabric-dot" style="background:#6250d6;"></span>Dacron</button>
-      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="12" data-burst="dacron"> PSI</div>
+    <div class="fabric-card active" data-fabric="dyneema">
+      <button class="fabric-toggle"><span class="fabric-dot" style="background:#14b8d4;"></span>Dyneema laminate</button>
+      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="20" data-burst="dyneema"> PSI</div>
     </div>
     <div class="fabric-card" data-fabric="exope">
       <button class="fabric-toggle"><span class="fabric-dot" style="background:#2a78d6;"></span>EXO-PE 85</button>
@@ -3431,13 +3431,13 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       <button class="fabric-toggle"><span class="fabric-dot" style="background:#1baf7a;"></span>N-Weave 45</button>
       <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="20" data-burst="nweave"> PSI</div>
     </div>
-    <div class="fabric-card" data-fabric="dyneema">
-      <button class="fabric-toggle"><span class="fabric-dot" style="background:#14b8d4;"></span>Dyneema laminate</button>
-      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="20" data-burst="dyneema"> PSI</div>
-    </div>
     <div class="fabric-card" data-fabric="aluula">
       <button class="fabric-toggle"><span class="fabric-dot" style="background:#f0c020;"></span>Aluula</button>
       <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="22" data-burst="aluula"> PSI</div>
+    </div>
+    <div class="fabric-card" data-fabric="dacron">
+      <button class="fabric-toggle"><span class="fabric-dot" style="background:#6250d6;"></span>Dacron</button>
+      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="12" data-burst="dacron"> PSI</div>
     </div>
   </div>
 
@@ -3459,8 +3459,8 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   <div class="below-plot">
     <div class="op-pressure-row">
       <label for="op-slider">Operating pressure</label>
-      <input type="range" id="op-slider" min="0" max="20" step="0.5" value="8">
-      <span class="op-val" id="op-val">8.0 PSI</span>
+      <input type="range" id="op-slider" min="0" max="20" step="0.5" value="10">
+      <span class="op-val" id="op-val">10.0 PSI</span>
     </div>
     <div class="intersect-toggle active" id="intersect-toggle">
       <label>Show failure boundary (surface × operating plane)</label>
@@ -3541,7 +3541,10 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       type: 'surface', x: ages, y: temps, z: z,
       surfacecolor: z,
       cmin: operatingPressure - FAIL_SPAN, cmax: operatingPressure + FAIL_SPAN,
-      colorscale: [[0, FAIL_RED], [0.5, FAIL_RED], [0.5, fab.color], [1, fab.color]],
+      // Failure colouring follows the 'Show failure boundary' toggle; off = plain fabric colour.
+      colorscale: showBoundary
+        ? [[0, FAIL_RED], [0.5, FAIL_RED], [0.5, fab.color], [1, fab.color]]
+        : [[0, fab.color], [1, fab.color]],
       opacity: 0.45, showscale: false,
       contours: { z: { show: true, usecolormap: false, project: { z: false }, color: fab.darkContour, width: 1 } },
       hovertemplate: fab.name + '<br>Age: %{x:.1f}<br>Temp: %{y:.0f}°C<br>Burst: %{z:.1f} PSI<extra></extra>',
@@ -3559,7 +3562,37 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     return {
       type: 'scatter3d', mode: 'lines', x: x, y: y, z: z,
       line: focused ? { color: fab.color, width: 8 } : { color: '#5c5c5c', width: 5 },
-      hoverinfo: 'skip', showlegend: false, name: fab.name + ' ' + wall + '-wall edge'
+      hoverinfo: 'skip', showlegend: false, name: fab.name + ' ' + wall + '-wall edge',
+      meta: { focusWall: wall }
+    };
+  }
+
+  // Dashed line where the operating pressure plane meets a back wall. Only shown in that wall's
+  // focus mode (always in the trace list, hidden otherwise, so focus never changes the trace count).
+  // Bold frame around a back wall, shown only while that wall is focused.
+  function mkWallBorder(wall) {
+    const f = wall === 'temp'
+      ? { x: [0, 0, 0, 0, 0], y: [25, 110, 110, 25, 25] }
+      : { x: [0, 3, 3, 0, 0], y: [25, 25, 25, 25, 25] };
+    return {
+      type: 'scatter3d', mode: 'lines', x: f.x, y: f.y, z: [0, 0, 25, 25, 0],
+      line: { color: '#1a1a1a', width: 7 },
+      visible: wallFocus === wall,
+      hoverinfo: 'skip', showlegend: false, name: 'Border ' + wall + ' wall',
+      meta: { focusWall: wall }
+    };
+  }
+
+  function mkWallOpLine(wall) {
+    const line = wall === 'temp'
+      ? { x: [0, 0], y: [25, 110] }
+      : { x: [0, 3], y: [25, 25] };
+    return {
+      type: 'scatter3d', mode: 'lines', x: line.x, y: line.y, z: [operatingPressure, operatingPressure],
+      line: { color: '#6e6e6e', width: 5, dash: 'dash' },
+      visible: wallFocus === wall,
+      hoverinfo: 'skip', showlegend: false, name: 'Operating pressure ' + wall + ' wall',
+      meta: { focusWall: wall }
     };
   }
 
@@ -3615,7 +3648,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     };
   }
 
-  let operatingPressure = 8;
+  let operatingPressure = 10;
   let showBoundary = true;
   // Invisible hover hotspots on the two back walls of the box, each with an explanatory popup.
   const WALL_HOVERLABEL = {
@@ -3682,7 +3715,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   };
 
   const config = { responsive: true, displayModeBar: false, scrollZoom: false, doubleClick: false };
-  const selected = new Set(['dacron']);
+  const selected = new Set(['dyneema']);
 
   function updateLegend() {
     const activeKeys = new Set();
@@ -3694,7 +3727,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       if (k === 'opplane') { el.classList.remove('hidden'); return; }
       if (k === 'failzone') {
         // Only when some selected surface actually dips below the operating plane (i.e. red is on screen).
-        const anyRed = [...selected].some(key => temps.some(T => ages.some(A => burstAt(fabrics[key], A, T) < operatingPressure)));
+        const anyRed = showBoundary && [...selected].some(key => temps.some(T => ages.some(A => burstAt(fabrics[key], A, T) < operatingPressure)));
         el.classList.toggle('hidden', !anyRed);
         return;
       }
@@ -3715,7 +3748,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   // Focus mode keeps the exact same trace list and only toggles visibility: swapping traces in and out
   // while Plotly is mid-hover crashes its 3D render loop (TypeError setting 'axes'), killing hover.
   function render() {
-    const traces = [...mkWallHotspots(), mkDangerPlane()];
+    const traces = [...mkWallHotspots(), mkDangerPlane(), mkWallOpLine('temp'), mkWallOpLine('seasons'), mkWallBorder('temp'), mkWallBorder('seasons')];
     for (const key of selected) {
       const fab = fabrics[key];
       traces.push(mkSurface(fab));
@@ -3728,10 +3761,9 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       }
     }
     if (wallFocus) {
-      const keepEdge = ' ' + wallFocus + '-wall edge';
       for (const t of traces) {
-        const isWall = t.meta && t.meta.wallHotspot;
-        if (!isWall && !t.name.endsWith(keepEdge)) t.visible = false;
+        const keep = t.meta && (t.meta.wallHotspot || t.meta.focusWall === wallFocus);
+        if (!keep) t.visible = false;
       }
     }
     Plotly.react('plot3d', traces, layout, config);

@@ -3514,7 +3514,9 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     },
     dyneema: {
       name: 'Dyneema laminate', color: '#14b8d4', darkContour: 'rgba(5,95,115,0.6)',
-      tempFactor: T => 1 / (1 + Math.exp((T - 100) / 20)),
+      // Logistic temp loss, normalised so 25 °C = 100% of the entered burst.
+      // Midpoint 81.5 °C is solved so that 60 °C (age 0) retains 79%.
+      tempFactor: T => (1 + Math.exp((25 - 81.5) / 20)) / (1 + Math.exp((T - 81.5) / 20)),
       thermalMult: T => 1 + (T - 25) / 35,
       kBase: 0.050, baseBurst: 20,
       sunLines: [{ name: 'Grey-black', T: 75, lineColor: '#2c2c2a', key: 'greyblack' }]

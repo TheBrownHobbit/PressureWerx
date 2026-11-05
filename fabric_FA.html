@@ -3486,13 +3486,12 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     <div class="legend-item" data-line="greyblack"><span class="legend-swatch" style="background:#2c2c2a;"></span>Grey-black 75 °C</div>
     <div class="legend-item" data-line="black"><span class="legend-swatch" style="background:#0a0a0a; border: 1px solid #555;"></span>Black 85 °C</div>
     <div class="legend-item" data-line="opplane"><span class="legend-swatch" style="background:#8a8a8a; height:8px;"></span>Operating pressure</div>
-    <div class="legend-item hidden" data-line="boundary"><span class="legend-swatch dashed"></span>Failure boundary</div>
     <div class="legend-item hidden" data-line="failzone"><span class="legend-swatch" style="background:rgba(232,41,28,0.7); height:8px;"></span>Below operating pressure</div>
   </div>
 
   <div class="below-plot">
     <div class="intersect-toggle active" id="intersect-toggle">
-      <label>Show failure boundary (surface × operating plane)</label>
+      <label>Show failure region</label>
       <div class="toggle-switch"></div>
     </div>
   </div>
@@ -3512,7 +3511,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
 <script>
   const axisColor = '#1a1a1a'; const gridColor = '#d0d0d0';
-  const zeroColor = '#888'; const intersectColor = '#555';
+  const zeroColor = '#888';
 
   // Temperature loss curves are logistic, normalised so 25 °C = 100% of the entered burst.
   // UHMWPE (Dyneema, EXO-PE, N-Weave, Aluula): fitted to the Dyneema fibre datasheet —
@@ -3618,7 +3617,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       type: 'surface', x: ages, y: temps, z: z,
       surfacecolor: z,
       cmin: operatingPressure - FAIL_SPAN, cmax: operatingPressure + FAIL_SPAN,
-      // Failure colouring follows the 'Show failure boundary' toggle; off = plain fabric colour.
+      // Failure colouring follows the 'Show failure region' toggle; off = plain fabric colour.
       colorscale: showBoundary
         ? [[0, FAIL_RED], [0.5, FAIL_RED], [0.5, fab.color], [1, fab.color]]
         : [[0, fab.color], [1, fab.color]],
@@ -3689,6 +3688,8 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     };
   }
 
+  // Thin light-grey outline of the failure region: where the surface crosses the operating plane
+  // (marching squares). Follows the 'Show failure region' toggle; not shown in the key.
   function mkIntersectionLine(fab, level) {
     const xOut = [], yOut = [], zOut = [];
     for (let j = 0; j < tempSteps - 1; j++) {
@@ -3707,11 +3708,11 @@ body[data-not-sent] > #vis-container ~ #not-sent {
         if (pts.length === 2) {
           xOut.push(pts[0][0], pts[1][0], null);
           yOut.push(pts[0][1], pts[1][1], null);
-          zOut.push(level + 0.3, level + 0.3, null);
+          zOut.push(level + 0.15, level + 0.15, null);
         } else if (pts.length === 4) {
           xOut.push(pts[0][0], pts[1][0], null, pts[2][0], pts[3][0], null);
           yOut.push(pts[0][1], pts[1][1], null, pts[2][1], pts[3][1], null);
-          zOut.push(level + 0.3, level + 0.3, null, level + 0.3, level + 0.3, null);
+          zOut.push(level + 0.15, level + 0.15, null, level + 0.15, level + 0.15, null);
         }
       }
     }
@@ -3719,9 +3720,9 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     return {
       type: 'scatter3d', mode: 'lines',
       x: xOut, y: yOut, z: zOut,
-      line: { color: intersectColor, width: 4, dash: 'dash' },
+      line: { color: '#7a7a7a', width: 2 },
       hoverinfo: 'skip', showlegend: false,
-      name: fab.name + ' failure boundary'
+      name: fab.label + ' failure boundary'
     };
   }
 
@@ -3825,17 +3826,12 @@ body[data-not-sent] > #vis-container ~ #not-sent {
         el.classList.toggle('hidden', !anyRed);
         return;
       }
-      if (k === 'boundary') {
-        if (showBoundary && active.length > 0) el.classList.remove('hidden');
-        else el.classList.add('hidden');
-        return;
-      }
       if (activeKeys.has(k)) el.classList.remove('hidden');
       else el.classList.add('hidden');
     });
   }
 
-  // Traces with hoverinfo:'skip' (operating plane, edge/boundary lines, wall frame) still block mouse
+  // Traces with hoverinfo:'skip' (operating plane, edge lines, wall frame) still block mouse
   // picking in Plotly's 3D renderer, so a surface behind the operating plane couldn't be hovered.
   // Plotly has no option for this, so after each render we stop those traces drawing into the pick
   // buffer and mark it dirty via glplot.update() (glplot.redraw() does NOT refresh picking).

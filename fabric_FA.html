@@ -3362,23 +3362,30 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   .pw .v-header-meta .eyebrow { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: #E8291C; font-weight: 700; }
   .pw .section-h { font-weight: 900; font-size: 22px; line-height: 1.1; letter-spacing: -0.5px; color: #ffffff; margin-bottom: 18px; }
   .pw .section-h em { font-style: normal; color: #E8291C; }
-  .pw .fabric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 16px; }
-  .pw .fabric-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px; padding: 13px 14px; display: flex; flex-direction: column; gap: 9px; position: relative; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
-  .pw .fabric-card:hover { border-color: #666; background: #212121; }
-  .pw .fabric-card.active { border-color: #E8291C; background: #1f0a09; box-shadow: 0 0 0 1px #E8291C, 0 4px 16px rgba(232,41,28,0.18); }
-  .pw .fabric-card.active::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: #E8291C; border-radius: 4px 4px 0 0; }
-  .pw .fabric-toggle { display: flex; align-items: center; gap: 10px; background: transparent; border: none; cursor: pointer; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; letter-spacing: 1.2px; text-transform: uppercase; font-weight: 700; color: #ffffff; text-align: left; padding: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-  /* The generic button:not(#action-btns button, …) rule above carries ID-level specificity and
-     forces dark text-primary + a light hover background onto these toggles. Pin the brand look. */
-  .pw .fabric-card .fabric-toggle,
-  .pw .fabric-card .fabric-toggle:hover,
-  .pw .fabric-card .fabric-toggle:active { color: #ffffff !important; background: transparent !important; border: none !important; padding: 0 !important; font-size: 15px !important; transform: none !important; }
   .pw .fabric-dot { width: 13px; height: 13px; border-radius: 50%; display: inline-block; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.25); }
-  .pw .burst-input-row { display: none; align-items: center; gap: 6px; font-family: 'Barlow Condensed', sans-serif; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; }
-  .pw .fabric-card.active .burst-input-row { display: flex; }
-  .pw .burst-input-row input { width: 58px; padding: 5px 7px; font-size: 13px; text-align: right; font-family: 'Barlow', sans-serif; font-weight: 700; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 3px; }
-  .pw .seam-row { display: none; align-items: center; flex-wrap: wrap; gap: 4px; }
-  .pw .fabric-card.active .seam-row { display: flex; }
+  /* Two stacked construction cards: title · fabric picker · seam pills · burst slider on one row. */
+  .pw .constructions { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .pw .cc { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 12px 16px; background: #141414; border: 1px solid #2a2a2a; border-radius: 4px; position: relative; transition: border-color .2s, background .2s, box-shadow .2s; }
+  .pw .cc.active { border-color: #E8291C; background: #1f0a09; box-shadow: 0 0 0 1px #E8291C, 0 4px 16px rgba(232,41,28,0.18); }
+  .pw .cc.active::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: #E8291C; border-radius: 4px 4px 0 0; }
+  .pw .cc-title { display: flex; align-items: center; gap: 9px; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #fff; white-space: nowrap; min-width: 150px; }
+  .pw .cc:not(.active) .cc-title { color: #888; }
+  .pw .cc:not(.active) .cc-dot { background: transparent !important; border: 1px dashed #666; }
+  /* Overrides the page's generic select rule. Type matches the Construction title. */
+  .pw .cc .cc-fabric { width: auto; min-width: 190px; height: auto; padding: 7px 10px; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 3px; }
+  .pw .cc:not(.active) .cc-fabric { color: #aaa; }
+  .pw .cc-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; flex: 1; min-width: 0; }
+  .pw .cc:not(.active) .cc-controls { display: none; }
+  .pw .cc-burst { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 240px; }
+  .pw .cc-burst label { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; white-space: nowrap; }
+  .pw .cc-burst input[type="range"] { flex: 1; min-width: 80px; accent-color: #E8291C; background: #b5b5b5; height: 5px; border-radius: 3px; }
+  .pw .cc-burst-val { font-family: 'Barlow', sans-serif; font-weight: 700; font-size: 15px; color: #fff; min-width: 62px; text-align: right; }
+  .pw .op-top { margin-bottom: 10px; }
+  .pw .plot-wrap { position: relative; }
+  .pw .plot-wrap + .legend-title { margin-top: 14px; }
+  .pw .plot-empty { position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 18px; pointer-events: none; font-family: 'Barlow Condensed', sans-serif; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: #777; }
+  .pw .plot-empty[hidden] { display: none; }
+  .pw .seam-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
   .pw .seam-label { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; margin-right: 2px; }
   .pw .seam-pill { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #aaa; border: 1px solid #444; border-radius: 999px; padding: 3px 7px; cursor: pointer; user-select: none; transition: background .15s, color .15s, border-color .15s; white-space: nowrap; }
   .pw .seam-pill:hover { border-color: #888; color: #fff; }
@@ -3390,6 +3397,10 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   .pw .plot-container { width: 100%; height: 440px; border: 1px solid #2a2a2a; border-radius: 4px; background: #ffffff; overflow: hidden; margin-top: 4px; }
   @media (max-width: 600px) {
     .pw .plot-container { height: 320px; }
+    .pw .cc-title { min-width: 0; flex: 1; }
+    .pw .cc .cc-fabric { min-width: 0; flex-basis: 100%; font-size: 16px; }
+    .pw .cc-title { font-size: 16px; }
+    .pw .cc-burst { min-width: 0; flex-basis: 100%; }
     /* Slider drops to its own full-width line so the PSI readout isn't pushed off the edge. */
     .pw .op-pressure-row { flex-wrap: wrap; row-gap: 10px; }
     .pw .op-pressure-row label { flex: 1; }
@@ -3411,7 +3422,6 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   .pw .intersect-toggle.active .toggle-switch::after { left: 20px; background: #0a0a0a; }
   .pw .legend-title { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #E8291C; margin: 18px 0 6px 0; padding: 0 2px; font-weight: 700; }
   .pw .legend-row { display: flex; gap: 14px; flex-wrap: wrap; padding: 0 2px; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #ddd; font-weight: 400; }
-  .pw .plot-container + .legend-title { margin-top: 14px; }
   .pw .legend-item { display: flex; align-items: center; gap: 7px; }
   .pw .legend-item.hidden { display: none; }
   .pw .legend-swatch { width: 18px; height: 3px; border-radius: 1px; }
@@ -3437,35 +3447,35 @@ body[data-not-sent] > #vis-container ~ #not-sent {
 
   <!-- Hidden for now: <div class="section-h">Residual burst vs <em>age</em> and <em>temperature</em></div> -->
 
-  <div class="fabric-grid" id="fabric-grid">
-    <div class="fabric-card active" data-fabric="dyneema">
-      <button class="fabric-toggle"><span class="fabric-dot" style="background:#14b8d4;"></span>Dyneema laminate</button>
-      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="20" data-burst="dyneema"> PSI</div>
-      <div class="seam-row" data-seam-for="dyneema"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
+  <div class="op-pressure-row op-top">
+    <label for="op-slider">Operating pressure</label>
+    <input type="range" id="op-slider" min="0" max="20" step="0.5" value="10">
+    <span class="op-val" id="op-val">10.0 PSI</span>
+  </div>
+
+  <div class="constructions" id="constructions">
+    <div class="cc" data-slot="0">
+      <div class="cc-title"><span class="fabric-dot cc-dot"></span>Construction 1</div>
+      <select class="cc-fabric" aria-label="Construction 1 fabric"><option value="">— None —</option><option value="dyneema">Dyneema laminate</option><option value="exope">EXO-PE 85</option><option value="nweave">N-Weave 45</option><option value="aluula">Aluula</option><option value="dacron">Dacron</option></select>
+      <div class="cc-controls">
+        <div class="seam-row" role="radiogroup" aria-label="Construction 1 seam"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
+        <div class="cc-burst"><label for="cc-burst-0">New burst @ 25 °C</label><input type="range" id="cc-burst-0" min="1" max="40" step="0.5"><span class="cc-burst-val"></span></div>
+      </div>
     </div>
-    <div class="fabric-card" data-fabric="exope">
-      <button class="fabric-toggle"><span class="fabric-dot" style="background:#2a78d6;"></span>EXO-PE 85</button>
-      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="20" data-burst="exope"> PSI</div>
-      <div class="seam-row" data-seam-for="exope"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
-    </div>
-    <div class="fabric-card" data-fabric="nweave">
-      <button class="fabric-toggle"><span class="fabric-dot" style="background:#1baf7a;"></span>N-Weave 45</button>
-      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="20" data-burst="nweave"> PSI</div>
-      <div class="seam-row" data-seam-for="nweave"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
-    </div>
-    <div class="fabric-card" data-fabric="aluula">
-      <button class="fabric-toggle"><span class="fabric-dot" style="background:#f0c020;"></span>Aluula</button>
-      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="22" data-burst="aluula"> PSI</div>
-      <div class="seam-row" data-seam-for="aluula"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
-    </div>
-    <div class="fabric-card" data-fabric="dacron">
-      <button class="fabric-toggle"><span class="fabric-dot" style="background:#6250d6;"></span>Dacron</button>
-      <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="12" data-burst="dacron"> PSI</div>
-      <div class="seam-row" data-seam-for="dacron"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
+    <div class="cc" data-slot="1">
+      <div class="cc-title"><span class="fabric-dot cc-dot"></span>Construction 2</div>
+      <select class="cc-fabric" aria-label="Construction 2 fabric"><option value="">— None —</option><option value="dyneema">Dyneema laminate</option><option value="exope">EXO-PE 85</option><option value="nweave">N-Weave 45</option><option value="aluula">Aluula</option><option value="dacron">Dacron</option></select>
+      <div class="cc-controls">
+        <div class="seam-row" role="radiogroup" aria-label="Construction 2 seam"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
+        <div class="cc-burst"><label for="cc-burst-1">New burst @ 25 °C</label><input type="range" id="cc-burst-1" min="1" max="40" step="0.5"><span class="cc-burst-val"></span></div>
+      </div>
     </div>
   </div>
 
-  <div id="plot3d" class="plot-container"></div>
+  <div class="plot-wrap">
+    <div id="plot3d" class="plot-container"></div>
+    <div class="plot-empty" id="plot-empty">Pick a fabric to plot</div>
+  </div>
 
   <div class="legend-title">Sun Temp Lines</div>
   <div class="legend-row" id="legend-row">
@@ -3481,11 +3491,6 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   </div>
 
   <div class="below-plot">
-    <div class="op-pressure-row">
-      <label for="op-slider">Operating pressure</label>
-      <input type="range" id="op-slider" min="0" max="20" step="0.5" value="10">
-      <span class="op-val" id="op-val">10.0 PSI</span>
-    </div>
     <div class="intersect-toggle active" id="intersect-toggle">
       <label>Show failure boundary (surface × operating plane)</label>
       <div class="toggle-switch"></div>
@@ -3575,12 +3580,25 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     both:     { label: 'Stitch + weld', title: 'Stitched + welded',  seamFactor: (A, T) => Math.max(stitchedFactor(A), weldedFactor(A, T)) },
     welded:   { label: 'Welded',        title: 'Welded only',        seamFactor: (A, T) => weldedFactor(A, T) }
   };
-  // Per-fabric default seam (typical commercial construction); user-editable from the cards.
-  const seamChoice = { dacron: 'stitched', exope: 'both', nweave: 'both', dyneema: 'stitched', aluula: 'welded' };
+  // Default seam per fabric (typical commercial construction); applied when a fabric is picked.
+  const defaultSeam = { dacron: 'stitched', exope: 'both', nweave: 'stitched', dyneema: 'stitched', aluula: 'welded' };
 
   const bulkBurst = (fab, A, T) => fab.baseBurst * fab.tempFactor(T) * Math.exp(-fab.kBase * fab.thermalMult(T) * A);
   // Effective burst at the seam line; everything plotted goes through this.
-  const burstAt = (fab, A, T) => bulkBurst(fab, A, T) * seamTypes[seamChoice[fab.key]].seamFactor(A, T);
+  const burstAt = (fab, A, T) => bulkBurst(fab, A, T) * seamTypes[fab.seam].seamFactor(A, T);
+
+  // The two construction cards. fabric null = card off. Construction 2 draws fainter with dashed
+  // back-wall outlines so it stays distinguishable when both cards use the same fabric.
+  const slots = [
+    { fabric: 'dyneema', seam: 'stitched', burst: 20 },
+    { fabric: null, seam: 'stitched', burst: 20 }
+  ];
+  const SLOT_STYLE = [ { opacity: 0.45, dash: 'solid' }, { opacity: 0.25, dash: 'dash' } ];
+  // One plotting object per active card: the fabric's model with that card's seam and burst.
+  const activeConstructions = () => slots.flatMap((sl, i) => sl.fabric ? [{
+    ...fabrics[sl.fabric], seam: sl.seam, baseBurst: sl.burst, slot: i,
+    label: 'Construction ' + (i + 1) + ' · ' + fabrics[sl.fabric].name
+  }] : []);
 
   const ageSteps = 51, tempSteps = 51;
   const ages = Array.from({length: ageSteps}, (_, i) => i * 3 / (ageSteps - 1));
@@ -3604,10 +3622,10 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       colorscale: showBoundary
         ? [[0, FAIL_RED], [0.5, FAIL_RED], [0.5, fab.color], [1, fab.color]]
         : [[0, fab.color], [1, fab.color]],
-      opacity: 0.45, showscale: false,
+      opacity: SLOT_STYLE[fab.slot].opacity, showscale: false,
       contours: { z: { show: true, usecolormap: false, project: { z: false }, color: fab.darkContour, width: 1 } },
-      hovertemplate: fab.name + ' · ' + seamTypes[seamChoice[fab.key]].title + '<br>Age: %{x:.1f}<br>Temp: %{y:.0f}°C<br>Burst: %{z:.1f} PSI<extra></extra>',
-      name: fab.name
+      hovertemplate: fab.label + '<br>' + seamTypes[fab.seam].title + '<br>Age: %{x:.1f}<br>Temp: %{y:.0f}°C<br>Burst: %{z:.1f} PSI<extra></extra>',
+      name: fab.label
     };
   }
 
@@ -3620,8 +3638,8 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     else { for (const A of ages) { x.push(A); y.push(25); z.push(burstAt(fab, A, 25)); } }
     return {
       type: 'scatter3d', mode: 'lines', x: x, y: y, z: z,
-      line: focused ? { color: fab.color, width: 8 } : { color: '#5c5c5c', width: 5 },
-      hoverinfo: 'skip', showlegend: false, name: fab.name + ' ' + wall + '-wall edge',
+      line: focused ? { color: fab.color, width: 8, dash: SLOT_STYLE[fab.slot].dash } : { color: '#5c5c5c', width: 5, dash: SLOT_STYLE[fab.slot].dash },
+      hoverinfo: 'skip', showlegend: false, name: fab.label + ' ' + wall + '-wall edge',
       meta: { focusWall: wall }
     };
   }
@@ -3666,7 +3684,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     return {
       type: 'scatter3d', mode: 'lines', x: x, y: y, z: z,
       line: { color: line.lineColor, width: 9 },
-      hovertemplate: fab.name + ' — ' + line.name + ' (Sun Temp ' + line.T + '°C)<br>Age: %{x:.1f}<br>Burst: %{z:.1f} PSI<extra></extra>',
+      hovertemplate: fab.label + ' — ' + line.name + ' (Sun Temp ' + line.T + '°C)<br>Age: %{x:.1f}<br>Burst: %{z:.1f} PSI<extra></extra>',
       showlegend: false, name: fab.name + ' ' + line.name
     };
   }
@@ -3793,24 +3811,22 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   }
 
   const config = { responsive: true, displayModeBar: false, scrollZoom: false, doubleClick: false };
-  const selected = new Set(['dyneema']);
 
   function updateLegend() {
     const activeKeys = new Set();
-    for (const key of selected) {
-      for (const line of fabrics[key].sunLines) activeKeys.add(line.key);
-    }
+    const active = activeConstructions();
+    for (const fab of active) for (const line of fab.sunLines) activeKeys.add(line.key);
     document.querySelectorAll('.legend-item').forEach(el => {
       const k = el.dataset.line;
       if (k === 'opplane') { el.classList.remove('hidden'); return; }
       if (k === 'failzone') {
         // Only when some selected surface actually dips below the operating plane (i.e. red is on screen).
-        const anyRed = showBoundary && [...selected].some(key => temps.some(T => ages.some(A => burstAt(fabrics[key], A, T) < operatingPressure)));
+        const anyRed = showBoundary && active.some(fab => temps.some(T => ages.some(A => burstAt(fab, A, T) < operatingPressure)));
         el.classList.toggle('hidden', !anyRed);
         return;
       }
       if (k === 'boundary') {
-        if (showBoundary && selected.size > 0) el.classList.remove('hidden');
+        if (showBoundary && active.length > 0) el.classList.remove('hidden');
         else el.classList.add('hidden');
         return;
       }
@@ -3851,8 +3867,9 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   function render() {
     tuneAxesForWidth();
     const traces = [...mkWallHotspots(), mkDangerPlane(), mkWallOpLine('temp'), mkWallOpLine('seasons'), mkWallBorder('temp'), mkWallBorder('seasons')];
-    for (const key of selected) {
-      const fab = fabrics[key];
+    const active = activeConstructions();
+    document.getElementById('plot-empty').hidden = active.length > 0;
+    for (const fab of active) {
       traces.push(mkSurface(fab));
       traces.push(mkBackWallEdge(fab, 'temp', wallFocus === 'temp'));
       traces.push(mkBackWallEdge(fab, 'seasons', wallFocus === 'seasons'));
@@ -4031,40 +4048,35 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     }, { capture: true, passive: false });
   }
 
-  document.querySelectorAll('.fabric-card').forEach(card => {
-    const key = card.dataset.fabric;
-    card.addEventListener('click', (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.closest('.seam-row')) return;
-      if (selected.has(key)) { selected.delete(key); card.classList.remove('active'); }
-      else { selected.add(key); card.classList.add('active'); }
-      render();
+  document.querySelectorAll('.cc').forEach(card => {
+    const slot = slots[+card.dataset.slot];
+    const select = card.querySelector('.cc-fabric');
+    const dot = card.querySelector('.cc-dot');
+    const pills = card.querySelectorAll('.seam-pill');
+    const burst = card.querySelector('input[type="range"]');
+    const burstVal = card.querySelector('.cc-burst-val');
+    const sync = () => {
+      card.classList.toggle('active', !!slot.fabric);
+      select.value = slot.fabric || '';
+      dot.style.background = slot.fabric ? fabrics[slot.fabric].color : '';
+      pills.forEach(p => { const on = p.dataset.seam === slot.seam; p.classList.toggle('active', on); p.setAttribute('aria-checked', on); });
+      burst.value = slot.burst;
+      burstVal.textContent = slot.burst.toFixed(1) + ' PSI';
+    };
+    // Switching fabric keeps the card's seam and burst. Turning a card on from None starts it on
+    // that fabric's defaults.
+    select.addEventListener('change', () => {
+      const wasOn = !!slot.fabric;
+      slot.fabric = select.value || null;
+      if (slot.fabric && !wasOn) { slot.seam = defaultSeam[slot.fabric]; slot.burst = fabrics[slot.fabric].baseBurst; }
+      sync(); render();
     });
-  });
-
-  document.querySelectorAll('input[data-burst]').forEach(inp => {
-    inp.addEventListener('input', e => {
-      const key = e.target.dataset.burst;
-      const v = parseFloat(e.target.value);
-      if (!isNaN(v) && v > 0) {
-        fabrics[key].baseBurst = v;
-        if (selected.has(key)) render();
-      }
+    const pick = pill => { slot.seam = pill.dataset.seam; sync(); render(); };
+    pills.forEach(pill => {
+      pill.addEventListener('click', () => pick(pill));
+      pill.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(pill); } });
     });
-    inp.addEventListener('click', e => e.stopPropagation());
-  });
-
-  document.querySelectorAll('.seam-row').forEach(row => {
-    const key = row.dataset.seamFor;
-    const sync = () => row.querySelectorAll('.seam-pill').forEach(p => {
-      const on = p.dataset.seam === seamChoice[key];
-      p.classList.toggle('active', on); p.setAttribute('aria-checked', on);
-    });
-    const pick = pill => { seamChoice[key] = pill.dataset.seam; sync(); if (selected.has(key)) render(); };
-    row.querySelectorAll('.seam-pill').forEach(pill => {
-      pill.addEventListener('click', e => { e.stopPropagation(); pick(pill); });
-      pill.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); pick(pill); } });
-    });
-    row.setAttribute('role', 'radiogroup');
+    burst.addEventListener('input', () => { slot.burst = parseFloat(burst.value); sync(); render(); });
     sync();
   });
 

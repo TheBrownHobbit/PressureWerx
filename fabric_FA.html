@@ -3550,7 +3550,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       name: 'Dyneema', color: '#14b8d4', darkContour: 'rgba(5,95,115,0.6)',
       tempFactor: uhmwpeTemp,
       thermalMult: T => 1 + (T - 25) / 35,
-      kBase: 0.050, baseBurst: 20,
+      kBase: 0.062, baseBurst: 20,   // was 0.050; raised for the calibration below (laminate flex-cracking)
       sunLines: [{ name: 'Grey-black', T: 75, lineColor: '#2c2c2a', key: 'greyblack' }]
     },
     aluula: {
@@ -3564,13 +3564,16 @@ body[data-not-sent] > #vis-container ~ #not-sent {
 
   Object.entries(fabrics).forEach(([k, f]) => { f.key = k; });
 
-  // Seam system: multiplies bulk fabric burst to give effective strength at the seam line,
-  // the weakest point of the structure. Factors are first-principles estimates.
-  // Stitched base 0.92 is calibrated so Dyneema laminate, stitched, 1.5 seasons at 75 °C,
-  // 20 PSI new gives ~8.8 PSI (one real-world failure) with the supplier-fitted UHMWPE curve.
-  const matrixTempFactor = T => 1 / (1 + Math.exp((T - 85) / 15));   // weld matrix softens ~85 °C
-  const stitchedFactor = A => 0.92 * Math.exp(-0.045 * A);             // needle holes grow with pack/inflate cycles
-  const weldedFactor = (A, T) => 0.95 * matrixTempFactor(T) * Math.exp(-0.025 * A);
+  // Seam system: scales the finished wing's burst to give effective strength at the seam line,
+  // the weakest point of the structure. "New burst @ 25 °C" is the as-built wing, so every seam
+  // factor is exactly 1 at age 0 and 25 °C; seams only change how strength falls with age and heat.
+  // Factors are first-principles estimates.
+  // Calibration: Dyneema, stitched, 1.5 seasons at 75 °C, 20 PSI new -> ~8.8 PSI (one real-world
+  // failure). The gap from the uncalibrated 9.6 PSI was split evenly between faster stitched-seam
+  // ageing (0.045 -> 0.073 /season) and faster Dyneema laminate ageing (kBase 0.050 -> 0.062).
+  const matrixTempFactor = T => (1 + Math.exp((25 - 85) / 15)) / (1 + Math.exp((T - 85) / 15)); // weld matrix softens ~85 °C
+  const stitchedFactor = A => Math.exp(-0.073 * A);                    // needle holes grow with pack/inflate cycles
+  const weldedFactor = (A, T) => matrixTempFactor(T) * Math.exp(-0.025 * A);
   const seamTypes = {
     stitched: { label: 'Stitched',      title: 'Stitched only',      seamFactor: (A, T) => stitchedFactor(A) },
     both:     { label: 'Stitch + weld', title: 'Stitched + welded',  seamFactor: (A, T) => Math.max(stitchedFactor(A), weldedFactor(A, T)) },

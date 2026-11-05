@@ -3406,6 +3406,8 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   .pw .legend-item.hidden { display: none; }
   .pw .legend-swatch { width: 18px; height: 3px; border-radius: 1px; }
   .pw .legend-swatch.dashed { background: repeating-linear-gradient(90deg, #666 0 5px, transparent 5px 8px); height: 2px; }
+  .pw .model-note { margin-top: 16px; padding: 8px 12px; border-left: 2px solid #E8291C; font-family: 'Barlow', sans-serif; font-size: 12.5px; color: #b0b0b0; font-weight: 300; line-height: 1.5; }
+  .pw .model-note strong { color: #e0e0e0; font-weight: 600; }
   .pw .caption { padding: 14px 2px 0; font-family: 'Barlow', sans-serif; font-size: 12px; color: #999; font-weight: 300; line-height: 1.5; }
 </style>
 
@@ -3475,6 +3477,8 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     </div>
   </div>
 
+  <p class="model-note"><strong>Model note:</strong> Temperature curves are fitted to supplier fibre data (79% strength at 60 °C for UHMWPE fabrics); values above 60 °C are extrapolated. Ageing rates are estimates based on fabric construction, not published test data. Use as a comparison guide, not a safety rating.</p>
+
   <p class="caption">Default view: Fabric Temp along the front, Seasons into depth on the right. Drag to pivot — the view stays on this side of the graph so the axis labels never jump.</p>
 </div>
 
@@ -3483,10 +3487,17 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   const axisColor = '#1a1a1a'; const gridColor = '#d0d0d0';
   const zeroColor = '#888'; const intersectColor = '#555';
 
+  // Temperature loss curves are logistic, normalised so 25 °C = 100% of the entered burst.
+  // UHMWPE (Dyneema, EXO-PE, N-Weave, Aluula): fitted to the Dyneema fibre datasheet —
+  // midpoint 81.5 °C so that 60 °C retains 79%. Above 60 °C is extrapolated (melt ~144–152 °C).
+  const uhmwpeTemp = T => (1 + Math.exp((25 - 81.5) / 20)) / (1 + Math.exp((T - 81.5) / 20));
+  // Polyester (Dacron): far more heat tolerant (melt ~260 °C).
+  const polyesterTemp = T => (1 + Math.exp((25 - 180) / 40)) / (1 + Math.exp((T - 180) / 40));
+
   const fabrics = {
     dacron: {
       name: 'Dacron', color: '#6250d6', darkContour: 'rgba(60,40,140,0.6)',
-      tempFactor: T => 1 / (1 + Math.exp((T - 180) / 40)),
+      tempFactor: polyesterTemp,
       thermalMult: T => 1 + (T - 25) / 90,
       kBase: 0.025, baseBurst: 12,
       sunLines: [
@@ -3497,7 +3508,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     },
     exope: {
       name: 'EXO-PE 85', color: '#2a78d6', darkContour: 'rgba(20,70,160,0.6)',
-      tempFactor: T => 1 / (1 + Math.exp((T - 110) / 22)),
+      tempFactor: uhmwpeTemp,
       thermalMult: T => 1 + (T - 25) / 50,
       kBase: 0.028, baseBurst: 20,
       sunLines: [
@@ -3507,23 +3518,21 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     },
     nweave: {
       name: 'N-Weave 45', color: '#1baf7a', darkContour: 'rgba(0,100,70,0.6)',
-      tempFactor: T => 1 / (1 + Math.exp((T - 110) / 22)),
+      tempFactor: uhmwpeTemp,
       thermalMult: T => 1 + (T - 25) / 50,
       kBase: 0.032, baseBurst: 20,
       sunLines: [{ name: 'Silver', T: 60, lineColor: '#666664', key: 'silver60' }]
     },
     dyneema: {
       name: 'Dyneema laminate', color: '#14b8d4', darkContour: 'rgba(5,95,115,0.6)',
-      // Logistic temp loss, normalised so 25 °C = 100% of the entered burst.
-      // Midpoint 81.5 °C is solved so that 60 °C (age 0) retains 79%.
-      tempFactor: T => (1 + Math.exp((25 - 81.5) / 20)) / (1 + Math.exp((T - 81.5) / 20)),
+      tempFactor: uhmwpeTemp,
       thermalMult: T => 1 + (T - 25) / 35,
       kBase: 0.050, baseBurst: 20,
       sunLines: [{ name: 'Grey-black', T: 75, lineColor: '#2c2c2a', key: 'greyblack' }]
     },
     aluula: {
       name: 'Aluula', color: '#f0c020', darkContour: 'rgba(130,95,0,0.6)',
-      tempFactor: T => 1 / (1 + Math.exp((T - 110) / 22)),
+      tempFactor: uhmwpeTemp,
       thermalMult: T => 1 + (T - 25) / 50,
       kBase: 0.022, baseBurst: 22,
       sunLines: [{ name: 'Gold', T: 68, lineColor: '#c48500', key: 'gold' }]

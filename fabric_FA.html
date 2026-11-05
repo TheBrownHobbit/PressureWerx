@@ -3368,10 +3368,8 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   .pw .cc { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 12px 16px; background: #141414; border: 1px solid #2a2a2a; border-radius: 4px; position: relative; transition: border-color .2s, background .2s, box-shadow .2s; }
   .pw .cc.active { border-color: #E8291C; background: #1f0a09; box-shadow: 0 0 0 1px #E8291C, 0 4px 16px rgba(232,41,28,0.18); }
   .pw .cc.active::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: #E8291C; border-radius: 4px 4px 0 0; }
-  .pw .cc-title { display: flex; align-items: center; gap: 9px; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #fff; white-space: nowrap; min-width: 150px; }
-  .pw .cc:not(.active) .cc-title { color: #888; }
   .pw .cc:not(.active) .cc-dot { background: transparent !important; border: 1px dashed #666; }
-  /* Overrides the page's generic select rule. Type matches the Construction title. */
+  /* Overrides the page's generic select rule. */
   .pw .cc .cc-fabric { width: auto; min-width: 190px; height: auto; padding: 7px 10px; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 3px; }
   .pw .cc:not(.active) .cc-fabric { color: #aaa; }
   .pw .cc-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; flex: 1; min-width: 0; }
@@ -3397,10 +3395,9 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   .pw .plot-container { width: 100%; height: 440px; border: 1px solid #2a2a2a; border-radius: 4px; background: #ffffff; overflow: hidden; margin-top: 4px; }
   @media (max-width: 600px) {
     .pw .plot-container { height: 320px; }
-    .pw .cc-title { min-width: 0; flex: 1; }
-    .pw .cc .cc-fabric { min-width: 0; flex-basis: 100%; font-size: 16px; }
-    .pw .cc-title { font-size: 16px; }
+    .pw .cc .cc-fabric { min-width: 0; flex: 1; font-size: 16px; }
     .pw .cc-burst { min-width: 0; flex-basis: 100%; }
+    .pw .cc-controls { flex-basis: 100%; }
     /* Slider drops to its own full-width line so the PSI readout isn't pushed off the edge. */
     .pw .op-pressure-row { flex-wrap: wrap; row-gap: 10px; }
     .pw .op-pressure-row label { flex: 1; }
@@ -3455,16 +3452,16 @@ body[data-not-sent] > #vis-container ~ #not-sent {
 
   <div class="constructions" id="constructions">
     <div class="cc" data-slot="0">
-      <div class="cc-title"><span class="fabric-dot cc-dot"></span>Construction 1</div>
-      <select class="cc-fabric" aria-label="Construction 1 fabric"><option value="">— None —</option><option value="dyneema">Dyneema laminate</option><option value="exope">EXO-PE 85</option><option value="nweave">N-Weave 45</option><option value="aluula">Aluula</option><option value="dacron">Dacron</option></select>
+      <span class="fabric-dot cc-dot"></span>
+      <select class="cc-fabric" aria-label="Construction 1 fabric"><option value="">— None —</option><option value="dyneema">Dyneema</option><option value="exope">EXO-PE 85</option><option value="nweave">N-Weave 45</option><option value="aluula">Aluula</option><option value="dacron">Dacron</option></select>
       <div class="cc-controls">
         <div class="seam-row" role="radiogroup" aria-label="Construction 1 seam"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
         <div class="cc-burst"><label for="cc-burst-0">New burst @ 25 °C</label><input type="range" id="cc-burst-0" min="1" max="40" step="0.5"><span class="cc-burst-val"></span></div>
       </div>
     </div>
     <div class="cc" data-slot="1">
-      <div class="cc-title"><span class="fabric-dot cc-dot"></span>Construction 2</div>
-      <select class="cc-fabric" aria-label="Construction 2 fabric"><option value="">— None —</option><option value="dyneema">Dyneema laminate</option><option value="exope">EXO-PE 85</option><option value="nweave">N-Weave 45</option><option value="aluula">Aluula</option><option value="dacron">Dacron</option></select>
+      <span class="fabric-dot cc-dot"></span>
+      <select class="cc-fabric" aria-label="Construction 2 fabric"><option value="">— None —</option><option value="dyneema">Dyneema</option><option value="exope">EXO-PE 85</option><option value="nweave">N-Weave 45</option><option value="aluula">Aluula</option><option value="dacron">Dacron</option></select>
       <div class="cc-controls">
         <div class="seam-row" role="radiogroup" aria-label="Construction 2 seam"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
         <div class="cc-burst"><label for="cc-burst-1">New burst @ 25 °C</label><input type="range" id="cc-burst-1" min="1" max="40" step="0.5"><span class="cc-burst-val"></span></div>
@@ -3550,7 +3547,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       sunLines: [{ name: 'Silver', T: 60, lineColor: '#666664', key: 'silver60' }]
     },
     dyneema: {
-      name: 'Dyneema laminate', color: '#14b8d4', darkContour: 'rgba(5,95,115,0.6)',
+      name: 'Dyneema', color: '#14b8d4', darkContour: 'rgba(5,95,115,0.6)',
       tempFactor: uhmwpeTemp,
       thermalMult: T => 1 + (T - 25) / 35,
       kBase: 0.050, baseBurst: 20,
@@ -3596,7 +3593,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   // One plotting object per active card: the fabric's model with that card's seam and burst.
   const activeConstructions = () => slots.flatMap((sl, i) => sl.fabric ? [{
     ...fabrics[sl.fabric], seam: sl.seam, baseBurst: sl.burst, slot: i,
-    label: 'Construction ' + (i + 1) + ' · ' + fabrics[sl.fabric].name
+    label: fabrics[sl.fabric].name
   }] : []);
 
   const ageSteps = 51, tempSteps = 51;

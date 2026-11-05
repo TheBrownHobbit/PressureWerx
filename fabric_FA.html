@@ -3377,6 +3377,16 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   .pw .burst-input-row { display: none; align-items: center; gap: 6px; font-family: 'Barlow Condensed', sans-serif; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; }
   .pw .fabric-card.active .burst-input-row { display: flex; }
   .pw .burst-input-row input { width: 58px; padding: 5px 7px; font-size: 13px; text-align: right; font-family: 'Barlow', sans-serif; font-weight: 700; background: #0a0a0a; color: #fff; border: 1px solid #555; border-radius: 3px; }
+  .pw .seam-row { display: none; align-items: center; flex-wrap: wrap; gap: 4px; }
+  .pw .fabric-card.active .seam-row { display: flex; }
+  .pw .seam-label { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #ccc; margin-right: 2px; }
+  .pw .seam-pill { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #aaa; border: 1px solid #444; border-radius: 999px; padding: 3px 7px; cursor: pointer; user-select: none; transition: background .15s, color .15s, border-color .15s; white-space: nowrap; }
+  .pw .seam-pill:hover { border-color: #888; color: #fff; }
+  .pw .seam-pill.active { background: #E8291C; border-color: #E8291C; color: #fff; }
+  .pw .seam-pill:focus-visible { outline: 2px solid #4af0c0; outline-offset: 1px; }
+  .pw .model-note ul { margin: 6px 0 0; padding-left: 16px; }
+  .pw .model-note li { margin: 2px 0; }
+  .pw .model-note a { color: #b0b0b0; }
   .pw .plot-container { width: 100%; height: 440px; border: 1px solid #2a2a2a; border-radius: 4px; background: #ffffff; overflow: hidden; margin-top: 4px; }
   @media (max-width: 600px) {
     .pw .plot-container { height: 320px; }
@@ -3431,22 +3441,27 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     <div class="fabric-card active" data-fabric="dyneema">
       <button class="fabric-toggle"><span class="fabric-dot" style="background:#14b8d4;"></span>Dyneema laminate</button>
       <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="20" data-burst="dyneema"> PSI</div>
+      <div class="seam-row" data-seam-for="dyneema"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
     </div>
     <div class="fabric-card" data-fabric="exope">
       <button class="fabric-toggle"><span class="fabric-dot" style="background:#2a78d6;"></span>EXO-PE 85</button>
       <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="20" data-burst="exope"> PSI</div>
+      <div class="seam-row" data-seam-for="exope"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
     </div>
     <div class="fabric-card" data-fabric="nweave">
       <button class="fabric-toggle"><span class="fabric-dot" style="background:#1baf7a;"></span>N-Weave 45</button>
       <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="20" data-burst="nweave"> PSI</div>
+      <div class="seam-row" data-seam-for="nweave"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
     </div>
     <div class="fabric-card" data-fabric="aluula">
       <button class="fabric-toggle"><span class="fabric-dot" style="background:#f0c020;"></span>Aluula</button>
       <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="22" data-burst="aluula"> PSI</div>
+      <div class="seam-row" data-seam-for="aluula"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
     </div>
     <div class="fabric-card" data-fabric="dacron">
       <button class="fabric-toggle"><span class="fabric-dot" style="background:#6250d6;"></span>Dacron</button>
       <div class="burst-input-row">New burst @ 25 °C: <input type="number" min="1" max="40" step="0.5" value="12" data-burst="dacron"> PSI</div>
+      <div class="seam-row" data-seam-for="dacron"><span class="seam-label">Seam</span><span class="seam-pill" role="radio" tabindex="0" data-seam="stitched" title="Stitched only">Stitched</span><span class="seam-pill" role="radio" tabindex="0" data-seam="both" title="Stitched + welded">Stitch + weld</span><span class="seam-pill" role="radio" tabindex="0" data-seam="welded" title="Welded only">Welded</span></div>
     </div>
   </div>
 
@@ -3477,7 +3492,14 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     </div>
   </div>
 
-  <p class="model-note"><strong>Model note:</strong> Temperature curves are fitted to supplier fibre data (79% strength at 60 °C for UHMWPE fabrics); values above 60 °C are extrapolated. Ageing rates are estimates based on fabric construction, not published test data. Use as a comparison guide, not a safety rating.</p>
+  <div class="model-note"><strong>Model note:</strong> Burst values are the effective strength at the seam line, the weakest point of the wing. Use as a comparison guide, not a safety rating.
+    <ul>
+      <li>Temperature curves are fitted to supplier fibre data (79% strength at 60 °C for UHMWPE fabrics). Above 60 °C is extrapolated; see Jenket 2017, <a href="https://drum.lib.umd.edu/items/0707df82-867e-4680-ad08-2ae12880c49b/full" target="_blank" rel="noopener">University of Maryland PhD dissertation</a>.</li>
+      <li>Sun Temp values are calibrated from a first-principles solar heat balance (clear NZ noon, ~900 W/m²). Field confirmation is in progress.</li>
+      <li>Seam factors are first-principles estimates. Hayes et al. (cited in Jevšnik 2017, <em>Journal of Industrial Textiles</em>) found sewn + taped seams stronger than ultrasonic welding alone for waterproof polyester.</li>
+      <li>No peer-reviewed ageing dataset exists for wing sailcloth. Ageing rates assume typical mixed use: stitched seams age mainly by pack/inflate cycling, welded seams mainly by exposure.</li>
+    </ul>
+  </div>
 
   <p class="caption">Default view: Fabric Temp along the front, Seasons into depth on the right. Drag to pivot — the view stays on this side of the graph so the axis labels never jump.</p>
 </div>
@@ -3539,7 +3561,26 @@ body[data-not-sent] > #vis-container ~ #not-sent {
     }
   };
 
-  const burstAt = (fab, A, T) => fab.baseBurst * fab.tempFactor(T) * Math.exp(-fab.kBase * fab.thermalMult(T) * A);
+  Object.entries(fabrics).forEach(([k, f]) => { f.key = k; });
+
+  // Seam system: multiplies bulk fabric burst to give effective strength at the seam line,
+  // the weakest point of the structure. Factors are first-principles estimates.
+  // Stitched base 0.92 is calibrated so Dyneema laminate, stitched, 1.5 seasons at 75 °C,
+  // 20 PSI new gives ~8.8 PSI (one real-world failure) with the supplier-fitted UHMWPE curve.
+  const matrixTempFactor = T => 1 / (1 + Math.exp((T - 85) / 15));   // weld matrix softens ~85 °C
+  const stitchedFactor = A => 0.92 * Math.exp(-0.045 * A);             // needle holes grow with pack/inflate cycles
+  const weldedFactor = (A, T) => 0.95 * matrixTempFactor(T) * Math.exp(-0.025 * A);
+  const seamTypes = {
+    stitched: { label: 'Stitched',      title: 'Stitched only',      seamFactor: (A, T) => stitchedFactor(A) },
+    both:     { label: 'Stitch + weld', title: 'Stitched + welded',  seamFactor: (A, T) => Math.max(stitchedFactor(A), weldedFactor(A, T)) },
+    welded:   { label: 'Welded',        title: 'Welded only',        seamFactor: (A, T) => weldedFactor(A, T) }
+  };
+  // Per-fabric default seam (typical commercial construction); user-editable from the cards.
+  const seamChoice = { dacron: 'stitched', exope: 'both', nweave: 'both', dyneema: 'stitched', aluula: 'welded' };
+
+  const bulkBurst = (fab, A, T) => fab.baseBurst * fab.tempFactor(T) * Math.exp(-fab.kBase * fab.thermalMult(T) * A);
+  // Effective burst at the seam line; everything plotted goes through this.
+  const burstAt = (fab, A, T) => bulkBurst(fab, A, T) * seamTypes[seamChoice[fab.key]].seamFactor(A, T);
 
   const ageSteps = 51, tempSteps = 51;
   const ages = Array.from({length: ageSteps}, (_, i) => i * 3 / (ageSteps - 1));
@@ -3565,7 +3606,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
         : [[0, fab.color], [1, fab.color]],
       opacity: 0.45, showscale: false,
       contours: { z: { show: true, usecolormap: false, project: { z: false }, color: fab.darkContour, width: 1 } },
-      hovertemplate: fab.name + '<br>Age: %{x:.1f}<br>Temp: %{y:.0f}°C<br>Burst: %{z:.1f} PSI<extra></extra>',
+      hovertemplate: fab.name + ' · ' + seamTypes[seamChoice[fab.key]].title + '<br>Age: %{x:.1f}<br>Temp: %{y:.0f}°C<br>Burst: %{z:.1f} PSI<extra></extra>',
       name: fab.name
     };
   }
@@ -3993,7 +4034,7 @@ body[data-not-sent] > #vis-container ~ #not-sent {
   document.querySelectorAll('.fabric-card').forEach(card => {
     const key = card.dataset.fabric;
     card.addEventListener('click', (e) => {
-      if (e.target.tagName === 'INPUT') return;
+      if (e.target.tagName === 'INPUT' || e.target.closest('.seam-row')) return;
       if (selected.has(key)) { selected.delete(key); card.classList.remove('active'); }
       else { selected.add(key); card.classList.add('active'); }
       render();
@@ -4010,6 +4051,21 @@ body[data-not-sent] > #vis-container ~ #not-sent {
       }
     });
     inp.addEventListener('click', e => e.stopPropagation());
+  });
+
+  document.querySelectorAll('.seam-row').forEach(row => {
+    const key = row.dataset.seamFor;
+    const sync = () => row.querySelectorAll('.seam-pill').forEach(p => {
+      const on = p.dataset.seam === seamChoice[key];
+      p.classList.toggle('active', on); p.setAttribute('aria-checked', on);
+    });
+    const pick = pill => { seamChoice[key] = pill.dataset.seam; sync(); if (selected.has(key)) render(); };
+    row.querySelectorAll('.seam-pill').forEach(pill => {
+      pill.addEventListener('click', e => { e.stopPropagation(); pick(pill); });
+      pill.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); pick(pill); } });
+    });
+    row.setAttribute('role', 'radiogroup');
+    sync();
   });
 
   const opSlider = document.getElementById('op-slider');
